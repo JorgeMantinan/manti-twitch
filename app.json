@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "ruleta-frontend",
-    "slug": "ruleta-frontend",
+    "name": "manti-twitch-frontend",
+    "slug": "manti-twitch-frontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "ruletafrontend",
+    "scheme": "manti-twitch",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -22,7 +22,9 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
       "output": "static",
+      "baseUrl": "/manti-twitch",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

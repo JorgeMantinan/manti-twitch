@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Linking } from 'react-native';
 
 export default function App() {
-  const [authUrl, setAuthUrl] = useState("https://tu-backend-en-render.com/auth/twitch");
+  const [authUrl, setAuthUrl] = useState("https://manti-twitch-backend.onrender.com/auth/twitch");
 
   const conectarTwitch = () => {
     // Esto abrirá el navegador para el login
