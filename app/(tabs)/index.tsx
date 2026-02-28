@@ -1,13 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Linking } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+
+// Saved the token react native mobile
+import * as SecureStore from 'expo-secure-store';
 
 export default function App() {
+  const { token } = useLocalSearchParams();
   const [authUrl, setAuthUrl] = useState("https://manti-twitch-backend.onrender.com/auth/twitch");
+
+  useEffect(() => {
+  if (token) {
+    saveToken(token as string);
+    window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [token]);
 
   const conectarTwitch = () => {
     // Esto abrirá el navegador para el login
     Linking.openURL(authUrl);
   };
+
+  const saveToken = async (token: string) => {
+  await SecureStore.setItemAsync('userToken', token);
+  console.log("Token guardado con éxito");
+};
 
   return (
     <View style={styles.container}>
