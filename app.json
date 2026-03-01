@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "manti-twitch-frontend",
-    "slug": "manti-twitch-frontend",
+    "name": "manti-twitch",
+    "slug": "manti-twitch",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -46,7 +46,8 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "baseUrl": "/manti-twitch"
     }
   }
 }
