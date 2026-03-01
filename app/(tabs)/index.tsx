@@ -23,14 +23,12 @@ export default function App() {
   }, [token]);
 
   const conectarTwitch = () => {
-    // En web, simplemente redirigimos la ventana actual al backend
+    const cleanUrl = authUrl.trim(); // <--- Añade esto para limpiar la URL
     console.log("Clic en Conectar con twitch");
-    alert("Intentando conectar con: " + authUrl);
     if (Platform.OS === 'web') {
-      window.location.href = authUrl;
+      window.location.assign(cleanUrl); // .assign es más fiable que .href en móviles
     } else {
-      // En móvil seguimos usando Linking
-      Linking.openURL(authUrl);
+      Linking.openURL(cleanUrl);
     }
   };
 
@@ -51,9 +49,33 @@ export default function App() {
         <Text style={styles.title}>🎡 Ruleta Twitch</Text>
         <Text style={styles.subtitle}>¡Conecta tu cuenta para empezar el sorteo!</Text>
         
-        <TouchableOpacity style={styles.button} onPress={conectarTwitch}>
+        {/* <TouchableOpacity style={styles.button} onPress={conectarTwitch}>
           <Text style={styles.buttonText}>CONECTAR CON TWITCH</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+
+          {Platform.OS === 'web' ? (
+    <button 
+      onClick={conectarTwitch}
+      style={{
+        backgroundColor: '#6441a5',
+        color: 'white',
+        padding: '15px 30px',
+        borderRadius: '8px',
+        border: 'none',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        width: '100%'
+      }}
+    >
+      CONECTAR CON TWITCH
+    </button>
+  ) : (
+    <TouchableOpacity style={styles.button} onPress={conectarTwitch}>
+      <Text style={styles.buttonText}>CONECTAR CON TWITCH</Text>
+    </TouchableOpacity>
+  )}
+
       </View>
     </View>
   );
