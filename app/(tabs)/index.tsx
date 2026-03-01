@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Linking } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Linking, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 // Saved the token react native mobile
@@ -17,14 +17,25 @@ export default function App() {
   }, [token]);
 
   const conectarTwitch = () => {
-    // Esto abrirá el navegador para el login
-    Linking.openURL(authUrl);
+    // En web, simplemente redirigimos la ventana actual al backend
+    if (Platform.OS === 'web') {
+      window.location.href = authUrl;
+    } else {
+      // En móvil seguimos usando Linking
+      Linking.openURL(authUrl);
+    }
   };
 
   const saveToken = async (token: string) => {
-  await SecureStore.setItemAsync('userToken', token);
-  console.log("Token guardado con éxito");
-};
+    if (Platform.OS === 'web') {
+      // Guardamos en el navegador
+      localStorage.setItem('userToken', token);
+    } else {
+      // Guardamos en el almacenamiento seguro del móvil
+      await SecureStore.setItemAsync('userToken', token);
+    }
+    console.log("Token guardado con éxito");
+  };
 
   return (
     <View style={styles.container}>

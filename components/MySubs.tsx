@@ -16,55 +16,38 @@ const MySubs = () => {
   const [loading, setLoading] = useState(false);
 
   const getMySubs = async () => {
-  setLoading(true);
-  try {
-    // 1. OBTENCIÓN DEL TOKEN SEGÚN LA PLATAFORMA
-    const token = Platform.OS === 'web' 
-      ? localStorage.getItem('userToken') 
-      : await SecureStore.getItemAsync('userToken');
+    setLoading(true);
+    try {
+      // Intentamos obtener el token según la plataforma
+      const token = Platform.OS === 'web' 
+        ? localStorage.getItem('userToken') 
+        : await SecureStore.getItemAsync('userToken');
 
-    // 2. VERIFICACIÓN DEL TOKEN
-    if (!token) {
-      const msg = "Por favor, vuelve a iniciar sesión.";
-      if (Platform.OS === 'web') {
-        console.warn("Sesión expirada:", msg);
-        alert(msg);
-      } else {
-        Alert.alert("Sesión expirada", msg);
+      if (!token) {
+        const msg = "Por favor, vuelve a iniciar sesión.";
+        // Alert de navegador para web, Alert nativo para móvil
+        Platform.OS === 'web' ? alert(msg) : Alert.alert("Sesión expirada", msg);
+        setLoading(false);
+        return;
       }
+
+      const url = `https://manti-twitch-backend.onrender.com/api/subs?startDate=${dates.start}&endDate=${dates.end}`;
+      
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const data = await response.json();
+      setSubs(data.subscribers || []);
+
+    } catch (err) {
+      console.error(err);
+      const errorMsg = "Error al conectar con el servidor.";
+      Platform.OS === 'web' ? alert(errorMsg) : Alert.alert("Error", errorMsg);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // 3. LLAMADA AL BACKEND
-    const url = `https://manti-twitch-backend.onrender.com/api/subs?startDate=${dates.start}&endDate=${dates.end}`;
-    
-    console.log("Intentando conectar con el servidor: ", url);
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const data = await response.json();
-    setSubs(data.subscribers || []);
-
-  } catch (err) {
-    console.error("Error completo:", err);
-    const errorMsg = "Error al conectar con el servidor.";
-    
-    if (Platform.OS === 'web') {
-      alert(errorMsg);
-    } else {
-      Alert.alert("Error", errorMsg);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <View style={styles.container}>
