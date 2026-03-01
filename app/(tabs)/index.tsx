@@ -10,14 +10,22 @@ export default function App() {
   const [authUrl, setAuthUrl] = useState("https://manti-twitch-backend.onrender.com/auth/twitch");
 
   useEffect(() => {
-  if (token) {
-    saveToken(token as string);
-    window.history.replaceState({}, '', window.location.pathname);
+    if (token) {
+      saveToken(token as string).then(() => {
+        // Solo limpiamos la URL una vez confirmado que se intentó guardar
+        if (Platform.OS === 'web') {
+          setTimeout(() => {
+            window.history.replaceState({}, '', window.location.pathname);
+          }, 500);
+        }
+      });
     }
   }, [token]);
 
   const conectarTwitch = () => {
     // En web, simplemente redirigimos la ventana actual al backend
+    console.log("Clic en Conectar con twitch");
+    alert("Intentando conectar con: " + authUrl);
     if (Platform.OS === 'web') {
       window.location.href = authUrl;
     } else {
