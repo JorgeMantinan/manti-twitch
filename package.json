@@ -1,7 +1,7 @@
 {
   "name": "ruleta-frontend",
   "main": "expo-router/entry",
-  "homepage": "https://jorgemantinan.github.io",
+  "homepage": "https://jorgemantinan.github.io/manti-twitch/",
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
