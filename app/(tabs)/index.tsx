@@ -44,40 +44,47 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>🎡 Ruleta Twitch</Text>
-        <Text style={styles.subtitle}>¡Conecta tu cuenta para empezar el sorteo!</Text>
-        
-        {/* <TouchableOpacity style={styles.button} onPress={conectarTwitch}>
+
+    <>
+    
+    {Platform.OS === 'web' ? (
+        <button 
+          onClick={conectarTwitch}
+          style={{
+            backgroundColor: '#6441a5',
+            color: 'white',
+            padding: '15px 30px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            width: '100%'
+          }}
+        >
+          CONECTAR CON TWITCH
+        </button>
+      ) : (
+        <TouchableOpacity style={styles.button} onPress={conectarTwitch}>
           <Text style={styles.buttonText}>CONECTAR CON TWITCH</Text>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
+      )}
+    
+    
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.title}>🎡 Ruleta Twitch</Text>
+          <Text style={styles.subtitle}>¡Conecta tu cuenta para empezar el sorteo!</Text>
+          
+          {/* <TouchableOpacity style={styles.button} onPress={conectarTwitch}>
+            <Text style={styles.buttonText}>CONECTAR CON TWITCH</Text>
+          </TouchableOpacity> */}
 
-          {Platform.OS === 'web' ? (
-    <button 
-      onClick={conectarTwitch}
-      style={{
-        backgroundColor: '#6441a5',
-        color: 'white',
-        padding: '15px 30px',
-        borderRadius: '8px',
-        border: 'none',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        width: '100%'
-      }}
-    >
-      CONECTAR CON TWITCH
-    </button>
-  ) : (
-    <TouchableOpacity style={styles.button} onPress={conectarTwitch}>
-      <Text style={styles.buttonText}>CONECTAR CON TWITCH</Text>
-    </TouchableOpacity>
-  )}
+            
 
+        </View>
       </View>
-    </View>
+    </>
   );
 }
 
