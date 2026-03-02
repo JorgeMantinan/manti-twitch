@@ -12,7 +12,6 @@ export default function App() {
   useEffect(() => {
     if (token) {
       saveToken(token as string).then(() => {
-        // Solo limpiamos la URL una vez confirmado que se intentó guardar
         if (Platform.OS === 'web') {
           setTimeout(() => {
             window.history.replaceState({}, '', window.location.pathname);
@@ -23,10 +22,10 @@ export default function App() {
   }, [token]);
 
   const conectarTwitch = () => {
-    const cleanUrl = authUrl.trim(); // <--- Añade esto para limpiar la URL
+    const cleanUrl = authUrl.trim(); 
     console.log("Clic en Conectar con twitch");
     if (Platform.OS === 'web') {
-      window.location.assign(cleanUrl); // .assign es más fiable que .href en móviles
+      window.location.assign(cleanUrl);
     } else {
       Linking.openURL(cleanUrl);
     }
