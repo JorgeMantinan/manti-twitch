@@ -18,14 +18,12 @@ const MySubs = () => {
   const getMySubs = async () => {
     setLoading(true);
     try {
-      // Intentamos obtener el token según la plataforma
       const token = Platform.OS === 'web' 
         ? localStorage.getItem('userToken') 
         : await SecureStore.getItemAsync('userToken');
 
       if (!token) {
         const msg = "Por favor, vuelve a iniciar sesión.";
-        // Alert de navegador para web, Alert nativo para móvil
         Platform.OS === 'web' ? alert(msg) : Alert.alert("Sesión expirada", msg);
         setLoading(false);
         return;
@@ -86,15 +84,77 @@ const MySubs = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 20, flex: 1 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, color: '#6441a5' },
-  inputGroup: { marginBottom: 15 },
-  input: { borderBottomWidth: 1, marginBottom: 10, padding: 8 },
-  button: { backgroundColor: '#6441a5', padding: 15, borderRadius: 8, alignItems: 'center' },
-  buttonText: { color: 'white', fontWeight: 'bold' },
-  card: { padding: 15, borderBottomWidth: 1, borderColor: '#eee' },
-  userName: { fontSize: 16, fontWeight: 'bold' },
-  date: { fontSize: 12, color: '#666' }
+  container: {
+    paddingTop: 80,
+    alignItems: 'center',
+    backgroundColor: '#F5F0E6',
+    height: '100%'
+  },
+
+  title: { 
+    fontSize: 24, 
+    fontWeight: '600', 
+    marginBottom: 20, 
+    color: '#2A2A2A', 
+    textAlign: 'center',
+    letterSpacing: 0.5 
+  },
+
+  inputGroup: { 
+    marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    padding: 15,
+    borderRadius: 20,
+    width: 400
+  },
+
+  input: { 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#C5A582',
+    marginBottom: 10, 
+    padding: 8,
+    color: '#2A2A2A'
+  },
+
+  button: { 
+    backgroundColor: '#C5A582',
+    padding: 15, 
+    borderRadius: 50, 
+    alignItems: 'center',
+    marginTop: 10
+  },
+
+  buttonText: { 
+    color: 'white', 
+    fontWeight: '500',
+    fontSize: 16 
+  },
+
+  card: { 
+    padding: 20, 
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(197, 165, 130, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2
+  },
+
+  userName: { 
+    fontSize: 17, 
+    fontWeight: '600', 
+    color: '#2A2A2A' 
+  },
+
+  date: { 
+    fontSize: 13, 
+    color: '#2A2A2A', 
+    opacity: 0.6
+  }
 });
 
 export default MySubs;

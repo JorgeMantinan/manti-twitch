@@ -12,13 +12,13 @@ import {
   StatusBar,
   Dimensions
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, RelativePathString } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
-const { width, height } = Dimensions.get('window');
-const isWeb = Platform.OS === 'web';
-
 export default function App() {
+
+  const router = useRouter();
+
   const { token } = useLocalSearchParams();
 
   const [authUrl] = useState<string>(
@@ -79,6 +79,17 @@ export default function App() {
     }
   };
 
+
+  const { width, height } = Dimensions.get('window');
+  const isWeb = Platform.OS === 'web';
+
+  const streamerButton = () => {
+    router.push({
+      pathname: "/MySubs" as RelativePathString,
+      params: { token: token }
+    });
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" />
@@ -126,7 +137,7 @@ export default function App() {
             <View style={styles.rolesContainer}>
               <RoleButton label="Usuario" />
               <RoleButton label="Moderador" />
-              <RoleButton label="Streamer" />
+              <RoleButton label="Streamer" onPress={streamerButton}/>
             </View>
           </View>
 
@@ -148,9 +159,9 @@ export default function App() {
 }
 
 /* ========================== */
-function RoleButton({ label }: { label: string }) {
+function RoleButton({ label, onPress }: { label: string, onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.outlineButton}>
+    <TouchableOpacity style={styles.outlineButton} onPress={onPress}>
       <Text style={styles.outlineButtonText}>{label}</Text>
     </TouchableOpacity>
   );
