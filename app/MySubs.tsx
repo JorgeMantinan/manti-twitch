@@ -29,10 +29,19 @@ const MySubs = () => {
         return;
       }
 
-      const url = `https://manti-twitch-backend.onrender.com/api/subs?startDate=${dates.start}&endDate=${dates.end}`;
-      
+      const url = `https://manti-twitch-backend.onrender.com/api/subs`;
+
       const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({
+          startDate: dates.start,
+          endDate: dates.end
+        })
       });
 
       const data = await response.json();
@@ -52,12 +61,14 @@ const MySubs = () => {
       <Text style={styles.title}>Mis Suscriptores de Pago</Text>
       
       <View style={styles.inputGroup}>
-        <TextInput 
+        <TextInput
+          nativeID="startDateInput"
           placeholder="Inicio (YYYY-MM-DD)" 
           style={styles.input} 
           onChangeText={(val) => setDates({...dates, start: val})}
         />
         <TextInput 
+          nativeID="endDateInput"
           placeholder="Fin (YYYY-MM-DD)" 
           style={styles.input} 
           onChangeText={(val) => setDates({...dates, end: val})}
@@ -71,10 +82,18 @@ const MySubs = () => {
       <FlatList
         data={subs}
         keyExtractor={(item, index) => index.toString()}
+        // Esta es la clave:
+        ListEmptyComponent={
+          !loading ? (
+            <View style={{ marginTop: 50, alignItems: 'center' }}>
+              <Text style={styles.sectionText}>No hay subs en este rango.</Text>
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.userName}>{item.user_name}</Text>
-            <Text>Tier: {item.tier === '1000' ? '1' : item.tier === '2000' ? '2' : '3'}</Text>
+            <Text style={styles.date}>Tier: {parseInt(item.tier) / 1000}</Text>
             <Text style={styles.date}>Suscrito: {new Date(item.created_at).toLocaleDateString()}</Text>
           </View>
         )}
@@ -155,6 +174,15 @@ const styles = StyleSheet.create({
     color: '#2A2A2A', 
     opacity: 0.6
   }
+  ,
+  
+  sectionText: {
+    fontSize: 16,
+    color: "#2A2A2A",
+    opacity: 0.75,
+    textAlign: "center",
+    lineHeight: 26,
+  },
 });
 
 export default MySubs;
