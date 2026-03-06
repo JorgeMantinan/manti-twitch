@@ -83,6 +83,13 @@ export default function App() {
   const { width, height } = Dimensions.get('window');
   const isWeb = Platform.OS === 'web';
 
+  const moderatorButton = () => {
+    router.push({
+      pathname: "/ToolsMods" as RelativePathString,
+      params: { token: token }
+    });
+  };
+
   const streamerButton = () => {
     router.push({
       pathname: "/MySubs" as RelativePathString,
@@ -136,7 +143,7 @@ export default function App() {
 
             <View style={styles.rolesContainer}>
               <RoleButton label="Usuario" />
-              <RoleButton label="Moderador" />
+              <RoleButton label="Moderador" onPress={moderatorButton}/>
               <RoleButton label="Streamer" onPress={streamerButton}/>
             </View>
           </View>
