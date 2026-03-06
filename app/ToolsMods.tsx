@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,37 +7,41 @@ import {
   ScrollView, 
   Dimensions 
 } from 'react-native';
-import { useRouter } from 'expo-router';
-// Importamos iconos para darle un toque más profesional
+import { useRouter, useLocalSearchParams, RelativePathString } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons'; 
 
 const { width } = Dimensions.get('window');
 
 const MOD_TOOLS = [
-  { 
-    id: '1', 
-    title: 'Seguidores', 
-    route: '/Mods/FollowersList', 
-    icon: 'account-group' 
-  },
-  { 
-    id: '2', 
-    title: 'Sorteo Seguidores', 
-    route: '/Mods/GiveawayWheel', 
-    icon: 'ferris-wheel' 
-  },
-  { 
-    id: '3', 
-    title: 'Puntos de Seguidores', 
-    route: '/Mods/PointsManager', 
-    icon: 'database-marker' 
-  },
-  // Puedes añadir más aquí y se alinearán solos
+  {id: '1',title: 'Seguidores',route: '/Mods/FollowersList',icon: 'account-group'},
+//   {id: '2',title: 'Sorteo Seguidores',route: '/Mods/GiveawayWheel',icon: 'ferris-wheel'},
+//   {id: '3', title: 'Puntos de Seguidores', route: '/Mods/PointsManager', icon: 'database-marker'},
 ];
 
-export default function ListUtilitiesMods() {
-  const router = useRouter();
-
+export default function ToolsMods() {
+    const router = useRouter();
+    const { token, scopes } = useLocalSearchParams(); 
+    const [isAuthorized, setIsAuthorized] = useState(false);
+  
+    // useEffect(() => {
+    //   const hasStreamerPrivileges = scopes?.includes('moderator:read:followers');
+  
+    //   if (!hasStreamerPrivileges) {
+    //     const msg = "Esta sección requiere permisos de canal que no has concedido.";
+    //     Platform.OS === 'web' ? alert(msg) : Alert.alert("Acceso Restringido", msg);
+    //     router.replace("/"); 
+    //   } else {
+    //     setIsAuthorized(true);
+    //   }
+    // }, [scopes]);
+  
+    const handlePress = (route: string) => {
+      // if (isAuthorized) {
+        router.push({ pathname: route as RelativePathString, params: { token } });
+      // }
+    };
+  
+    // if (!isAuthorized) return null;
   return (
     <View style={styles.mainContainer}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -71,7 +75,7 @@ export default function ListUtilitiesMods() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#FAF7F2', // Fondo Crema Zen
+    backgroundColor: '#FAF7F2',
   },
   scrollContent: {
     flexGrow: 1,
@@ -85,28 +89,28 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2A2A2A', // Negro Carbón
+    color: '#2A2A2A',
     letterSpacing: 1,
   },
   underline: {
     width: 60,
     height: 3,
-    backgroundColor: '#C5A582', // Arena/Dorado
+    backgroundColor: '#C5A582',
     marginTop: 8,
     borderRadius: 2,
   },
   menuGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center', // Alinea al centro si hay pocos botones
+    justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    maxWidth: 900, // Ajuste para que quepan 4 en línea en web/tablet
+    maxWidth: 900,
     alignSelf: 'center',
   },
   menuButton: {
-    backgroundColor: 'rgba(255,255,255,0.9)', // Blanco Hueso translúcido
-    width: width > 800 ? 180 : (width / 2) - 30, // Responsive: Fijo en web, 2 por fila en móvil
+    backgroundColor: 'rgba(255,255,255,0.9)', 
+    width: width > 800 ? 180 : (width / 2) - 30,
     height: 180,
     margin: 12,
     borderRadius: 28,

@@ -92,7 +92,7 @@ export default function App() {
 
   const streamerButton = () => {
     router.push({
-      pathname: "/MySubs" as RelativePathString,
+      pathname: "/ToolsStreamer" as RelativePathString,
       params: { token: token }
     });
   };
