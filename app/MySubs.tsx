@@ -15,6 +15,13 @@ const MySubs = () => {
   const [subs, setSubs] = useState<Subscriber[]>([]); 
   const [loading, setLoading] = useState(false);
 
+  interface Subscriber {
+    user_name: string;
+    tier: string;
+    is_gift: boolean;
+    gifter_name?: string;
+  }
+
   const getMySubs = async () => {
     setLoading(true);
     try {
@@ -93,8 +100,14 @@ const MySubs = () => {
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.userName}>{item.user_name}</Text>
+
+            {item.is_gift ? (
+              <Text style={styles.date}>Regalada por: {item.gifter_name}</Text>
+            ) : (
+              <Text style={styles.date}>Comprada por el usuario</Text>
+            )}
+
             <Text style={styles.date}>Tier: {parseInt(item.tier) / 1000}</Text>
-            <Text style={styles.date}>Suscrito: {new Date(item.created_at).toLocaleDateString()}</Text>
           </View>
         )}
       />
