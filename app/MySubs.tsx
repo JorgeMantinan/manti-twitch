@@ -66,21 +66,6 @@ const MySubs = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mis Suscriptores de Pago</Text>
-      
-      <View style={styles.inputGroup}>
-        <TextInput
-          nativeID="startDateInput"
-          placeholder="Inicio (YYYY-MM-DD)" 
-          style={styles.input} 
-          onChangeText={(val) => setDates({...dates, start: val})}
-        />
-        <TextInput 
-          nativeID="endDateInput"
-          placeholder="Fin (YYYY-MM-DD)" 
-          style={styles.input} 
-          onChangeText={(val) => setDates({...dates, end: val})}
-        />
-      </View>
 
       <TouchableOpacity style={styles.button} onPress={getMySubs}>
         <Text style={styles.buttonText}>{loading ? 'Cargando...' : 'Filtrar Subs'}</Text>
@@ -93,7 +78,7 @@ const MySubs = () => {
         ListEmptyComponent={
           !loading ? (
             <View style={{ marginTop: 50, alignItems: 'center' }}>
-              <Text style={styles.sectionText}>No hay subs en este rango.</Text>
+              <Text style={styles.sectionText}>No hay subs actualmente.</Text>
             </View>
           ) : null
         }
