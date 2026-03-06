@@ -51,6 +51,12 @@ const MySubs = () => {
         })
       });
 
+      if (response.status === 403) {
+        localStorage.removeItem("userToken");
+        window.location.href = "https://manti-twitch-backend.onrender.com/auth/twitch";
+        return;
+      }
+
       const data = await response.json();
       setSubs(data.subscribers || []);
 
