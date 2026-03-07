@@ -26,6 +26,7 @@ export default function App() {
   );
 
   const [isLogged, setIsLogged] = useState(false);
+  const [scopes, setScopes] = useState<string[]>([]);
 
   /* ========================== */
   const saveToken = async (token: string) => {
@@ -52,17 +53,40 @@ export default function App() {
     }
   };
 
+  const validateToken = async (token: string) => {
+    try {
+      const response = await fetch("https://id.twitch.tv/oauth2/validate", {
+        headers: {
+          Authorization: `OAuth ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data?.scopes) {
+        setScopes(data.scopes);
+      }
+    } catch (err) {
+      console.error("Error validating token", err);
+    }
+  };
+
   /* ========================== */
   useEffect(() => {
-    if (token) {
-      saveToken(token as string).then(() => {
+    const handleLogin = async () => {
+      if (token) {
+        await saveToken(token as string);
+        await validateToken(token as string);
+
         if (Platform.OS === 'web') {
           setTimeout(() => {
             window.history.replaceState({}, '', window.location.pathname);
           }, 500);
         }
-      });
-    }
+      }
+    };
+
+    handleLogin();
   }, [token]);
 
   /* ========================== */
@@ -78,6 +102,7 @@ export default function App() {
 
       if (storedToken) {
         setIsLogged(true);
+        await validateToken(storedToken);
       }
     };
 
@@ -98,6 +123,14 @@ export default function App() {
   const isWeb = Platform.OS === 'web';
 
   const moderatorButton = () => {
+    if (!isLogged) {
+      alert("Debes iniciar sesión con Twitch.");
+      return;
+    }
+    if (!scopes.includes("moderator:read:followers")) {
+      alert("No tienes permisos de moderador.\nScope requerido: moderator:read:followers");
+      return;
+    }
     router.push({
       pathname: "/ToolsMods" as RelativePathString,
       params: { token: token }
@@ -105,6 +138,14 @@ export default function App() {
   };
 
   const streamerButton = () => {
+    if (!isLogged) {
+      alert("Debes iniciar sesión con Twitch.");
+      return;
+    }
+    if (!scopes.includes("channel:read:subscriptions")) {
+      alert("No tienes permisos de streamer.\nScope requerido: channel:read:subscriptions");
+      return;
+    }
     router.push({
       pathname: "/ToolsStreamer" as RelativePathString,
       params: { token: token }
