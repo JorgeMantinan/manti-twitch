@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
 
   card: { 
     padding: 15, backgroundColor: 'white', borderRadius: 15, marginBottom: 10,
-    borderWidth: 1, borderColor: 'rgba(197, 165, 130, 0.2)'
+    borderWidth: 1, borderColor: 'rgba(197, 165, 130, 0.2)', width:500
   },
   userName: { fontSize: 16, fontWeight: '600', color: '#2A2A2A' },
   date: { fontSize: 12, color: '#2A2A2A', opacity: 0.5 },

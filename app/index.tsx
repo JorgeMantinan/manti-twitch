@@ -12,22 +12,27 @@ import {
   StatusBar,
   Dimensions
 } from 'react-native';
-import { useRouter, useLocalSearchParams, RelativePathString } from 'expo-router';
+import { useRouter, RelativePathString } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from "jwt-decode";
 
 export default function App() {
 
   const router = useRouter();
-
-  const { token } = useLocalSearchParams();
-
   const [authUrl] = useState<string>(
     "https://manti-twitch-backend.onrender.com/auth/twitch"
   );
 
   const [isLogged, setIsLogged] = useState(false);
   const [scopes, setScopes] = useState<string[]>([]);
+
+  const getToken = async () => {
+    if (Platform.OS === "web") {
+      return localStorage.getItem("userToken");
+    } else {
+      return await SecureStore.getItemAsync("userToken");
+    }
+  };
 
   /* ========================== */
   const saveToken = async (token: string) => {
@@ -70,20 +75,25 @@ export default function App() {
   /* ========================== */
   useEffect(() => {
     const handleLogin = async () => {
-      if (token) {
-        await saveToken(token as string);
-        await validateToken(token as string);
 
-        if (Platform.OS === 'web') {
-          setTimeout(() => {
-            window.history.replaceState({}, '', window.location.pathname);
-          }, 500);
+      if (Platform.OS === "web") {
+
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token");
+
+        if (token) {
+
+          await saveToken(token);
+          await validateToken(token);
+
+          window.history.replaceState({}, '', window.location.pathname);
         }
       }
+
     };
 
     handleLogin();
-  }, [token]);
+  }, []);
 
   /* ========================== */
   useEffect(() => {
@@ -119,18 +129,15 @@ export default function App() {
   const isWeb = Platform.OS === 'web';
 
   const moderatorButton = () => {
-    // if (!isLogged) {
-    //   alert("Debes iniciar sesión con Twitch.");
-    //   return;
-    // }
-    // if (!scopes.includes("moderator:read:followers")) {
-    //   alert("No tienes permisos de moderador.");
-    //   return;
-    // }
-    router.push({
-      pathname: "/ToolsMods" as RelativePathString,
-      params: { token: token }
-    });
+    if (!isLogged) {
+      alert("Debes iniciar sesión con Twitch.");
+      return;
+    }
+    if (!scopes.includes("moderator:read:followers")) {
+      alert("No tienes permisos de moderador.");
+      return;
+    }
+    router.push("/ToolsMods" as RelativePathString);
   };
 
   const streamerButton = () => {
@@ -142,10 +149,7 @@ export default function App() {
       alert("No tienes permisos de streamer.");
       return;
     }
-    router.push({
-      pathname: "/ToolsStreamer" as RelativePathString,
-      params: { token: token }
-    });
+    router.push("/ToolsStreamer" as RelativePathString);
   };
 
   return (

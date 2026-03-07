@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useRouter, useLocalSearchParams, RelativePathString } from 'expo-router';
+import * as SecureStore from "expo-secure-store";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -55,44 +56,59 @@ const MOD_TOOLS = [
 export default function ToolsMods() {
 
   const router = useRouter();
-  const { token } = useLocalSearchParams();
+  const [token, setToken] = useState<string | null>(null);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
 
+  async function saveToken(token: string) {
+    if (Platform.OS === "web") {
+      localStorage.setItem("userToken", token);
+    } else {
+      await SecureStore.setItemAsync("userToken", token);
+    }
+  }
+
   useEffect(() => {
-    // if (!token) return;
+    const loadToken = async () => {
+      let storedToken;
+      if (Platform.OS === "web") {
+        storedToken = localStorage.getItem("userToken");
+      } else {
+        storedToken = await SecureStore.getItemAsync("userToken");
+      }
+      if (!storedToken) {
+        router.replace("/");
+        return;
+      }
+      setToken(storedToken);
+      const decoded = decodeJWT(storedToken);
+      const scopes = decoded?.scopes || [];
 
-    const decoded = decodeJWT(token as string);
-    const scopes = decoded?.scopes || [];
-    const hasModPrivileges = scopes.some(scope =>
-      scope.trim() === 'moderator:read:followers'
-    );
-
-    // if (!hasModPrivileges) {
-    //   const msg = "Esta sección requiere permisos de moderador que no has concedido.";
-
-    //   if (Platform.OS === 'web') {
-    //     alert(msg);
-    //   } else {
-    //     Alert.alert("Acceso Restringido", msg);
-    //   }
-    //   router.replace("/");
-    // } else {
-    //   setIsAuthorized(true);
-
-    // }
-  }, [token]);
+      const hasModPrivileges = scopes.some(scope =>
+        scope.trim() === 'moderator:read:followers'
+      );
+      if (!hasModPrivileges) {
+        const msg = "Esta sección requiere permisos de moderador.";
+        if (Platform.OS === 'web') {
+          alert(msg);
+        } else {
+          Alert.alert("Acceso Restringido", msg);
+        }
+        router.replace("/");
+        return;
+      }
+      setIsAuthorized(true);
+    };
+    loadToken();
+  }, []);
 
   const handlePress = (route: string) => {
     if (isAuthorized) {
-      router.push({
-        pathname: route as RelativePathString,
-        params: { token }
-      });
+      router.push(route as RelativePathString);
     }
   };
 
-  // if (!isAuthorized) return null;
+  if (!isAuthorized) return null;
 
   return (
     <View style={styles.mainContainer}>
