@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Platform, View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
+import { Platform, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 interface Subscriber {
@@ -15,17 +15,17 @@ interface DecodedToken {
 
 function decodeJWT(token: string): DecodedToken | null {
   try {
-
     const payload = token.split('.')[1];
-    const decoded = JSON.parse(atob(payload));
+    const decoded = JSON.parse(
+      Platform.OS === 'web'
+        ? atob(payload)
+        : Buffer.from(payload, 'base64').toString()
+    );
 
     let scopes: string[] = [];
 
-    if (Array.isArray(decoded.scopes)) {
-      scopes = decoded.scopes;
-    } else if (typeof decoded.scopes === "string") {
-      scopes = decoded.scopes.split(" ");
-    }
+    if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
+    else if (typeof decoded.scopes === "string") scopes = decoded.scopes.split(" ");
 
     return { scopes };
 
@@ -35,13 +35,8 @@ function decodeJWT(token: string): DecodedToken | null {
   }
 }
 
-function hasScope(scopes: string[], scope: string) {
-  return scopes.some(s => s.trim() === scope);
-}
-
 const MySubs = () => {
 
-  const [dates, setDates] = useState({ start: '', end: '' });
   const [subs, setSubs] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -59,16 +54,18 @@ const MySubs = () => {
       const token = await getToken();
 
       if (!token) {
-        Alert.alert("Sesión expirada", "Por favor vuelve a iniciar sesión.");
+        Alert.alert("Sesión expirada", "Inicia sesión nuevamente.");
         return;
       }
 
       const decoded = decodeJWT(token);
 
-      if (!decoded) return;
+      const hasPerms = decoded?.scopes.some(
+        s => s === "channel:read:subscriptions"
+      );
 
-      if (!hasScope(decoded.scopes, "channel:read:subscriptions")) {
-        Alert.alert("Permisos insuficientes");
+      if (!hasPerms) {
+        Alert.alert("Permisos insuficientes", "No tienes el permiso 'channel:read:subscriptions'.");
         return;
       }
 
@@ -79,25 +76,26 @@ const MySubs = () => {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            startDate: dates.start || null,
-            endDate: dates.end || null
-          })
+          }
         }
       );
 
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error obteniendo subs");
+      }
+
       setSubs(data.subscribers || []);
 
-    } catch (err) {
+    } catch (err: any) {
 
       console.error(err);
 
-      const errorMsg = "Error al conectar con el servidor.";
-      Platform.OS === 'web'
-        ? alert(errorMsg)
-        : Alert.alert("Error", errorMsg);
+      Alert.alert(
+        "Error",
+        err.message || "Error al conectar con el servidor."
+      );
 
     } finally {
       setLoading(false);
@@ -106,35 +104,50 @@ const MySubs = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mis Suscriptores de Pago</Text>
+
+      <Text style={styles.title}>Mis Suscriptores</Text>
 
       <TouchableOpacity style={styles.button} onPress={getMySubs}>
         <Text style={styles.buttonText}>
-          {loading ? 'Cargando...' : 'Filtrar Subs'}
+          {loading ? 'Cargando...' : 'Cargar Suscriptores'}
         </Text>
       </TouchableOpacity>
 
       <FlatList
         data={subs}
         keyExtractor={(item, index) => index.toString()}
+        style={{ width: '100%', marginTop: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+
         ListEmptyComponent={
           !loading ? (
             <View style={{ marginTop: 50, alignItems: 'center' }}>
-              <Text style={styles.sectionText}>No hay subs actualmente.</Text>
+              <Text style={styles.sectionText}>
+                No hay suscriptores actualmente.
+              </Text>
             </View>
           ) : null
         }
+
         renderItem={({ item }) => (
           <View style={styles.card}>
+
             <Text style={styles.userName}>{item.user_name}</Text>
 
             {item.is_gift ? (
-              <Text style={styles.date}>Regalada por: {item.gifter_name}</Text>
+              <Text style={styles.date}>
+                Regalada por: {item.gifter_name}
+              </Text>
             ) : (
-              <Text style={styles.date}>Comprada por el usuario</Text>
+              <Text style={styles.date}>
+                Comprada por el usuario
+              </Text>
             )}
 
-            <Text style={styles.date}>Tier: {Number(item.tier) / 1000}</Text>
+            <Text style={styles.date}>
+              Tier: {Number(item.tier) / 1000}
+            </Text>
+
           </View>
         )}
       />
@@ -143,6 +156,7 @@ const MySubs = () => {
 };
 
 const styles = StyleSheet.create({
+
   container: {
     paddingTop: 80,
     alignItems: 'center',
@@ -150,79 +164,54 @@ const styles = StyleSheet.create({
     height: '100%'
   },
 
-  title: { 
-    fontSize: 24, 
-    fontWeight: '600', 
-    marginBottom: 20, 
-    color: '#2A2A2A', 
-    textAlign: 'center',
-    letterSpacing: 0.5 
-  },
-
-  inputGroup: { 
+  title: {
+    fontSize: 24,
+    fontWeight: '600',
     marginBottom: 20,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    padding: 15,
-    borderRadius: 20,
-    width: 400
-  },
-
-  input: { 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#C5A582',
-    marginBottom: 10, 
-    padding: 8,
     color: '#2A2A2A'
   },
 
-  button: { 
+  button: {
     backgroundColor: '#C5A582',
-    padding: 15, 
-    borderRadius: 50, 
-    alignItems: 'center',
-    marginTop: 10
+    padding: 15,
+    borderRadius: 50,
+    alignItems: 'center'
   },
 
-  buttonText: { 
-    color: 'white', 
-    fontWeight: '500',
-    fontSize: 16 
+  buttonText: {
+    color: 'white',
+    fontWeight: '600'
   },
 
-  card: { 
-    padding: 20, 
-    backgroundColor: 'rgba(255,255,255,0.9)',
+  card: {
+    padding: 20,
+    backgroundColor: 'white',
     borderRadius: 20,
-    marginBottom: 12,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(197, 165, 130, 0.2)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2
+    borderColor: 'rgba(197,165,130,0.2)',
+    width: 500,
+    alignItems: 'center'
   },
 
-  userName: { 
-    fontSize: 17, 
-    fontWeight: '600', 
-    color: '#2A2A2A' 
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2A2A2A'
   },
 
-  date: { 
-    fontSize: 13, 
-    color: '#2A2A2A', 
+  date: {
+    fontSize: 12,
+    color: '#2A2A2A',
+    opacity: 0.6
+  },
+
+  sectionText: {
+    fontSize: 14,
+    color: "#2A2A2A",
     opacity: 0.6
   }
-  ,
-  
-  sectionText: {
-    fontSize: 16,
-    color: "#2A2A2A",
-    opacity: 0.75,
-    textAlign: "center",
-    lineHeight: 26,
-  },
+
 });
 
 export default MySubs;
