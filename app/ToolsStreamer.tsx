@@ -16,7 +16,7 @@ type DecodedToken = {
 function decodeJWT(token: string): DecodedToken | null {
   try {
     const payload = token.split(".")[1];
-    const decoded = Buffer.from(payload, "base64").toString("utf-8");
+    const decoded = JSON.parse(atob(payload));
     const parsed = JSON.parse(decoded);
 
     let scopes: string[] = [];

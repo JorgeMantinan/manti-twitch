@@ -17,7 +17,7 @@ function decodeJWT(token: string): DecodedToken | null {
   try {
 
     const payload = token.split('.')[1];
-    const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
+    const decoded = JSON.parse(atob(payload));
 
     let scopes: string[] = [];
 
@@ -29,7 +29,8 @@ function decodeJWT(token: string): DecodedToken | null {
 
     return { scopes };
 
-  } catch {
+  } catch (err) {
+    console.error("JWT decode error:", err);
     return null;
   }
 }
