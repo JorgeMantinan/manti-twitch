@@ -12,7 +12,6 @@ import {
 
 import { useRouter, useLocalSearchParams, RelativePathString } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Buffer } from "buffer";
 
 const { width } = Dimensions.get('window');
 
@@ -26,8 +25,7 @@ type DecodedToken = {
 function decodeJWT(token: string): DecodedToken | null {
   try {
     const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload));
-    const parsed = JSON.parse(decoded);
+    const parsed = JSON.parse(atob(payload));
 
     let scopes: string[] = [];
 
@@ -42,7 +40,8 @@ function decodeJWT(token: string): DecodedToken | null {
       scopes
     };
 
-  } catch {
+  } catch (err) {
+    console.error("JWT decode error:", err);
     return null;
   }
 }
