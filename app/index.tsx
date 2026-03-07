@@ -38,6 +38,20 @@ export default function App() {
     setIsLogged(true);
   };
 
+  const resetToken = async () => {
+    if (Platform.OS === "web") {
+      localStorage.removeItem("userToken");
+    } else {
+      await SecureStore.deleteItemAsync("userToken");
+    }
+
+    setIsLogged(false);
+
+    if (Platform.OS === "web") {
+      window.location.reload();
+    }
+  };
+
   /* ========================== */
   useEffect(() => {
     if (token) {
@@ -122,16 +136,27 @@ export default function App() {
                 facilitar sorteos y dinámicas con el chat.
               </Text>
 
-              {!isLogged && (
+              <View style={styles.buttonRow}>
+                {!isLogged && (
+                  <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={conectarTwitch}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      Loguear con Twitch
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
-                  style={styles.primaryButton}
-                  onPress={conectarTwitch}
+                  style={styles.resetButton}
+                  onPress={resetToken}
                 >
-                  <Text style={styles.primaryButtonText}>
-                    Loguear con Twitch
+                  <Text style={styles.resetButtonText}>
+                    Reset login
                   </Text>
                 </TouchableOpacity>
-              )}
+              </View>
             </View>
           </View>
 
@@ -292,5 +317,25 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: '100%',
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 30,
+  },
+
+  resetButton: {
+    marginTop: 30,
+    backgroundColor: "#E57373",
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 50,
+  },
+
+  resetButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });
