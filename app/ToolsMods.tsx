@@ -47,7 +47,7 @@ function decodeJWT(token: string): DecodedToken | null {
 }
 
 const MOD_TOOLS = [
-  {id: '1',title: 'Seguidores',route: '/Mods/FollowersList',icon: 'account-group'},
+  {id: '1',title: 'Seguidores',route: '/ListFollowers',icon: 'account-group'},
 //   {id: '2',title: 'Sorteo Seguidores',route: '/Mods/GiveawayWheel',icon: 'ferris-wheel'},
 //   {id: '3', title: 'Puntos de Seguidores', route: '/Mods/PointsManager', icon: 'database-marker'},
 ];
@@ -60,7 +60,7 @@ export default function ToolsMods() {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    // if (!token) return;
 
     const decoded = decodeJWT(token as string);
     const scopes = decoded?.scopes || [];
@@ -68,19 +68,19 @@ export default function ToolsMods() {
       scope.trim() === 'moderator:read:followers'
     );
 
-    if (!hasModPrivileges) {
-      const msg = "Esta sección requiere permisos de moderador que no has concedido.";
+    // if (!hasModPrivileges) {
+    //   const msg = "Esta sección requiere permisos de moderador que no has concedido.";
 
-      if (Platform.OS === 'web') {
-        alert(msg);
-      } else {
-        Alert.alert("Acceso Restringido", msg);
-      }
-      router.replace("/");
-    } else {
-      setIsAuthorized(true);
+    //   if (Platform.OS === 'web') {
+    //     alert(msg);
+    //   } else {
+    //     Alert.alert("Acceso Restringido", msg);
+    //   }
+    //   router.replace("/");
+    // } else {
+    //   setIsAuthorized(true);
 
-    }
+    // }
   }, [token]);
 
   const handlePress = (route: string) => {
@@ -92,7 +92,7 @@ export default function ToolsMods() {
     }
   };
 
-  if (!isAuthorized) return null;
+  // if (!isAuthorized) return null;
 
   return (
     <View style={styles.mainContainer}>

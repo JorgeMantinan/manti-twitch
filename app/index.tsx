@@ -119,14 +119,14 @@ export default function App() {
   const isWeb = Platform.OS === 'web';
 
   const moderatorButton = () => {
-    if (!isLogged) {
-      alert("Debes iniciar sesión con Twitch.");
-      return;
-    }
-    if (!scopes.includes("moderator:read:followers")) {
-      alert("No tienes permisos de moderador.");
-      return;
-    }
+    // if (!isLogged) {
+    //   alert("Debes iniciar sesión con Twitch.");
+    //   return;
+    // }
+    // if (!scopes.includes("moderator:read:followers")) {
+    //   alert("No tienes permisos de moderador.");
+    //   return;
+    // }
     router.push({
       pathname: "/ToolsMods" as RelativePathString,
       params: { token: token }
