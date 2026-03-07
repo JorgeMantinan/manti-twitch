@@ -1,69 +1,103 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Platform, View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
-
-// Saved the token react native mobile
 import * as SecureStore from 'expo-secure-store';
 
 interface Subscriber {
   user_name: string;
   tier: string;
-  created_at: string;
+  is_gift: boolean;
+  gifter_name?: string;
+}
+
+interface DecodedToken {
+  scopes: string[];
+}
+
+function decodeJWT(token: string): DecodedToken | null {
+  try {
+
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
+
+    let scopes: string[] = [];
+
+    if (Array.isArray(decoded.scopes)) {
+      scopes = decoded.scopes;
+    } else if (typeof decoded.scopes === "string") {
+      scopes = decoded.scopes.split(" ");
+    }
+
+    return { scopes };
+
+  } catch {
+    return null;
+  }
+}
+
+function hasScope(scopes: string[], scope: string) {
+  return scopes.some(s => s.trim() === scope);
 }
 
 const MySubs = () => {
+
   const [dates, setDates] = useState({ start: '', end: '' });
-  const [subs, setSubs] = useState<Subscriber[]>([]); 
+  const [subs, setSubs] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(false);
 
-  interface Subscriber {
-    user_name: string;
-    tier: string;
-    is_gift: boolean;
-    gifter_name?: string;
-  }
+  const getToken = async () => {
+    if (Platform.OS === 'web') return localStorage.getItem('userToken');
+    return await SecureStore.getItemAsync('userToken');
+  };
 
   const getMySubs = async () => {
+
     setLoading(true);
+
     try {
-      const token = Platform.OS === 'web' 
-        ? localStorage.getItem('userToken') 
-        : await SecureStore.getItemAsync('userToken');
+
+      const token = await getToken();
 
       if (!token) {
-        const msg = "Por favor, vuelve a iniciar sesión.";
-        Platform.OS === 'web' ? alert(msg) : Alert.alert("Sesión expirada", msg);
-        setLoading(false);
+        Alert.alert("Sesión expirada", "Por favor vuelve a iniciar sesión.");
         return;
       }
 
-      const url = `https://manti-twitch-backend.onrender.com/api/subs`;
+      const decoded = decodeJWT(token);
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+      if (!decoded) return;
 
-        body: JSON.stringify({
-          startDate: dates.start,
-          endDate: dates.end
-        })
-      });
-
-      if (response.status === 403) {
-        localStorage.removeItem("userToken");
-        window.location.href = "https://manti-twitch-backend.onrender.com/auth/twitch";
+      if (!hasScope(decoded.scopes, "channel:read:subscriptions")) {
+        Alert.alert("Permisos insuficientes");
         return;
       }
+
+      const response = await fetch(
+        "https://manti-twitch-backend.onrender.com/api/subs",
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            startDate: dates.start || null,
+            endDate: dates.end || null
+          })
+        }
+      );
 
       const data = await response.json();
       setSubs(data.subscribers || []);
 
     } catch (err) {
+
       console.error(err);
+
       const errorMsg = "Error al conectar con el servidor.";
-      Platform.OS === 'web' ? alert(errorMsg) : Alert.alert("Error", errorMsg);
+      Platform.OS === 'web'
+        ? alert(errorMsg)
+        : Alert.alert("Error", errorMsg);
+
     } finally {
       setLoading(false);
     }
@@ -74,13 +108,14 @@ const MySubs = () => {
       <Text style={styles.title}>Mis Suscriptores de Pago</Text>
 
       <TouchableOpacity style={styles.button} onPress={getMySubs}>
-        <Text style={styles.buttonText}>{loading ? 'Cargando...' : 'Filtrar Subs'}</Text>
+        <Text style={styles.buttonText}>
+          {loading ? 'Cargando...' : 'Filtrar Subs'}
+        </Text>
       </TouchableOpacity>
 
       <FlatList
         data={subs}
         keyExtractor={(item, index) => index.toString()}
-        // Esta es la clave:
         ListEmptyComponent={
           !loading ? (
             <View style={{ marginTop: 50, alignItems: 'center' }}>
@@ -98,7 +133,7 @@ const MySubs = () => {
               <Text style={styles.date}>Comprada por el usuario</Text>
             )}
 
-            <Text style={styles.date}>Tier: {parseInt(item.tier) / 1000}</Text>
+            <Text style={styles.date}>Tier: {Number(item.tier) / 1000}</Text>
           </View>
         )}
       />

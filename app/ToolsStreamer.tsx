@@ -17,19 +17,33 @@ function decodeJWT(token: string): DecodedToken | null {
   try {
     const payload = token.split(".")[1];
     const decoded = Buffer.from(payload, "base64").toString("utf-8");
-    return JSON.parse(decoded);
+    const parsed = JSON.parse(decoded);
+
+    let scopes: string[] = [];
+
+    if (Array.isArray(parsed.scopes)) {
+      scopes = parsed.scopes;
+    } else if (typeof parsed.scopes === "string") {
+      scopes = parsed.scopes.split(" ");
+    }
+
+    return {
+      ...parsed,
+      scopes
+    };
+
   } catch {
     return null;
   }
 }
 
 const STREAMER_TOOLS = [
-    // { id: '1', title: 'Ruleta de Sorteos', route: '/Streamer/Roulette', icon: 'clover' },
-    // { id: '2', title: 'Guerra de Barcos', route: '/Streamer/ShipWar', icon: 'ship-wheel' },
-    // { id: '3', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
-    // { id: '4', title: 'Listado Usuarios', route: '/Streamer/UserList', icon: 'account-details' },
-    // { id: '5', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
-    // { id: '6', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
+    { id: '1', title: 'Ruleta de Sorteos', route: '/Streamer/Roulette', icon: 'clover' },
+    { id: '2', title: 'Guerra de Barcos', route: '/Streamer/ShipWar', icon: 'ship-wheel' },
+    { id: '3', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
+    { id: '4', title: 'Listado Usuarios', route: '/Streamer/UserList', icon: 'account-details' },
+    { id: '5', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
+    { id: '6', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
     { id: '7', title: 'Suscriptores actuales', route: '/MySubs', icon: 'account-star' },
 ];
 
@@ -46,7 +60,9 @@ export default function ToolsStreamer() {
 
     const decoded = decodeJWT(token as string);
     const scopes = decoded?.scopes || [];
-    const hasStreamerPrivileges = scopes.includes('channel:read:subscriptions');
+    const hasStreamerPrivileges = scopes.some(scope =>
+      scope.trim() === 'channel:read:subscriptions'
+    );
 
     if (!hasStreamerPrivileges) {
       const msg = "Esta sección requiere permisos de canal que no has concedido.";

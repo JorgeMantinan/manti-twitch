@@ -27,7 +27,21 @@ function decodeJWT(token: string): DecodedToken | null {
   try {
     const payload = token.split(".")[1];
     const decoded = Buffer.from(payload, "base64").toString("utf-8");
-    return JSON.parse(decoded);
+    const parsed = JSON.parse(decoded);
+
+    let scopes: string[] = [];
+
+    if (Array.isArray(parsed.scopes)) {
+      scopes = parsed.scopes;
+    } else if (typeof parsed.scopes === "string") {
+      scopes = parsed.scopes.split(" ");
+    }
+
+    return {
+      ...parsed,
+      scopes
+    };
+
   } catch {
     return null;
   }
@@ -51,7 +65,9 @@ export default function ToolsMods() {
 
     const decoded = decodeJWT(token as string);
     const scopes = decoded?.scopes || [];
-    const hasModPrivileges = scopes.includes('moderator:read:followers');
+    const hasModPrivileges = scopes.some(scope =>
+      scope.trim() === 'moderator:read:followers'
+    );
 
     if (!hasModPrivileges) {
       const msg = "Esta sección requiere permisos de moderador que no has concedido.";
