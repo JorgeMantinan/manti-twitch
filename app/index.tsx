@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, RelativePathString } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { jwtDecode } from "jwt-decode";
 
 export default function App() {
 
@@ -55,19 +56,14 @@ export default function App() {
 
   const validateToken = async (token: string) => {
     try {
-      const response = await fetch("https://id.twitch.tv/oauth2/validate", {
-        headers: {
-          Authorization: `OAuth ${token}`
-        }
-      });
+      const decoded: any = jwtDecode(token);
 
-      const data = await response.json();
-
-      if (data?.scopes) {
-        setScopes(data.scopes);
+      if (decoded?.scopes) {
+        setScopes(decoded.scopes);
       }
+
     } catch (err) {
-      console.error("Error validating token", err);
+      console.error("Error decoding token", err);
     }
   };
 
@@ -128,7 +124,7 @@ export default function App() {
       return;
     }
     if (!scopes.includes("moderator:read:followers")) {
-      alert("No tienes permisos de moderador.\nScope requerido: moderator:read:followers");
+      alert("No tienes permisos de moderador.");
       return;
     }
     router.push({
@@ -143,7 +139,7 @@ export default function App() {
       return;
     }
     if (!scopes.includes("channel:read:subscriptions")) {
-      alert("No tienes permisos de streamer.\nScope requerido: channel:read:subscriptions");
+      alert("No tienes permisos de streamer.");
       return;
     }
     router.push({
