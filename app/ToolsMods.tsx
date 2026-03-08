@@ -49,7 +49,7 @@ function decodeJWT(token: string): DecodedToken | null {
 
 const MOD_TOOLS = [
   {id: '1',title: 'Seguidores',route: '/ListFollowers',icon: 'account-group'},
-//   {id: '2',title: 'Sorteo Seguidores',route: '/Mods/GiveawayWheel',icon: 'ferris-wheel'},
+  {id: '2',title: 'Ruleta',route: '/SmartRoulette',icon: 'ferris-wheel'},
 //   {id: '3', title: 'Puntos de Seguidores', route: '/Mods/PointsManager', icon: 'database-marker'},
 ];
 
@@ -102,10 +102,22 @@ export default function ToolsMods() {
     loadToken();
   }, []);
 
-  const handlePress = (route: string) => {
-    if (isAuthorized) {
-      router.push(route as RelativePathString);
+  const handlePress = async (route: string) => {
+    if (!isAuthorized) return;
+    if (route === "/SmartRoulette") {
+      const stored = Platform.OS === "web"
+        ? localStorage.getItem("followersList")
+        : await SecureStore.getItemAsync("followersList");
+      const participants = stored ? JSON.parse(stored) : [];
+      router.push({
+        pathname: "/SmartRoulette",
+        params: {
+          data: JSON.stringify(participants)
+        }
+      });
+      return;
     }
+    router.push(route as RelativePathString);
   };
 
   if (!isAuthorized) return null;

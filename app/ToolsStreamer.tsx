@@ -38,12 +38,12 @@ function decodeJWT(token: string): DecodedToken | null {
 }
 
 const STREAMER_TOOLS = [
-    { id: '1', title: 'Ruleta de Sorteos', route: '/Streamer/Roulette', icon: 'clover' },
-    { id: '2', title: 'Guerra de Barcos', route: '/Streamer/ShipWar', icon: 'ship-wheel' },
-    { id: '3', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
-    { id: '4', title: 'Listado Usuarios', route: '/Streamer/UserList', icon: 'account-details' },
-    { id: '5', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
-    { id: '6', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
+    { id: '1', title: 'Ruleta', route: '/SmartRoulette', icon: 'clover' },
+    // { id: '2', title: 'Guerra de Barcos', route: '/Streamer/ShipWar', icon: 'ship-wheel' },
+    // { id: '3', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
+    // { id: '4', title: 'Listado Usuarios', route: '/Streamer/UserList', icon: 'account-details' },
+    // { id: '5', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
+    // { id: '6', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
     { id: '7', title: 'Suscriptores actuales', route: '/MySubs', icon: 'account-star' },
 ];
 
@@ -96,10 +96,22 @@ export default function ToolsStreamer() {
     loadToken();
   }, []);
 
-  const handlePress = (route: string) => {
-    if (isAuthorized) {
-      router.push(route as RelativePathString);
+  const handlePress = async (route: string) => {
+    if (!isAuthorized) return;
+    if (route === "/SmartRoulette") {
+      const stored = Platform.OS === "web"
+        ? localStorage.getItem("subsList")
+        : await SecureStore.getItemAsync("subsList");
+      const participants = stored ? JSON.parse(stored) : [];
+      router.push({
+        pathname: "/SmartRoulette",
+        params: {
+          data: JSON.stringify(participants)
+        }
+      });
+      return;
     }
+    router.push(route as RelativePathString);
   };
 
   if (!isAuthorized) return null;
