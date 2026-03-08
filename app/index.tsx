@@ -152,6 +152,10 @@ export default function App() {
     router.push("/ToolsStreamer" as RelativePathString);
   };
 
+  const userButton = () => {
+    router.push("/ToolsUsers" as RelativePathString);
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" />
@@ -208,7 +212,7 @@ export default function App() {
             </Text>
 
             <View style={styles.rolesContainer}>
-              <RoleButton label="Usuario" />
+              <RoleButton label="Usuario" onPress={userButton}/>
               <RoleButton label="Moderador" onPress={moderatorButton}/>
               <RoleButton label="Streamer" onPress={streamerButton}/>
             </View>
