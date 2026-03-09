@@ -74,26 +74,21 @@ export default function App() {
 
   /* ========================== */
   useEffect(() => {
-    const handleLogin = async () => {
+  const handleLogin = async () => {
+    if (Platform.OS === "web") {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
 
-      if (Platform.OS === "web") {
-
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get("token");
-
-        if (token) {
-
-          await saveToken(token);
-          await validateToken(token);
-
-          window.history.replaceState({}, '', window.location.pathname);
-        }
+      if (token) {
+        await saveToken(token);
+        await validateToken(token);
+        router.replace("/" as RelativePathString);
       }
+    }
+  };
 
-    };
-
-    handleLogin();
-  }, []);
+  handleLogin();
+}, []);
 
   /* ========================== */
   useEffect(() => {
