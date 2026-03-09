@@ -366,7 +366,7 @@ Z
             <SvgText
               x={tx}
               y={ty}
-              fontSize="10"
+              fontSize={visual.length > 40 ? "10" : "18"}
               fill="white"
               textAnchor="middle"
               alignmentBaseline="middle"

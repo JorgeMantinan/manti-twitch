@@ -103,8 +103,8 @@ export default function Ships() {
       id: `ship-${i}-${Date.now()}`,
       name: p.name,
       isSub: p.isSub,
-      hp: p.isSub ? 400 : 120,
-      maxHp: p.isSub ? 400 : 120,
+      hp: p.isSub ? 160 : 120,
+      maxHp: p.isSub ? 160 : 120,
       x: Math.random() * (width - 100) + 50,
       y: Math.random() * (height - 200) + 100,
       vx: (Math.random() - 0.5) * SHIP_SPEED_MULT, 
@@ -138,7 +138,7 @@ export default function Ships() {
             const dist = Math.hypot(ship.x - bullet.x, ship.y - bullet.y);
             if (dist < 35) {
               hit = true;
-              ship.hp -= bullet.isSub ? 25 : 15;
+              ship.hp -= bullet.isSub ? 18 : 15;
               if (ship.hp <= 0) {
                 const owner = allShips.find(k => k.id === bullet.ownerId);
                 if (owner) owner.kills += 1;
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   scoreTitle: { color: '#FFD700', fontSize: 10, fontWeight: 'bold', marginBottom: 5 },
   scoreText: { fontSize: 13, fontWeight: 'bold', marginBottom: 2 },
   shipContainer: { position: 'absolute', alignItems: 'center' },
-  shipName: { fontSize: 10, fontWeight: 'bold', textShadowColor: '#000', textShadowRadius: 2 },
+  shipName: { fontSize: 14, fontWeight: 'bold', textShadowColor: '#000', textShadowRadius: 2 },
   hpBG: { height: 4, width: 35, backgroundColor: '#333' },
   hpFill: { height: '100%' },
   bullet: { position: 'absolute', width: BULLET_SIZE, height: BULLET_SIZE, borderRadius: BULLET_SIZE/2 },
