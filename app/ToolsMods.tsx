@@ -49,8 +49,8 @@ function decodeJWT(token: string): DecodedToken | null {
 
 const MOD_TOOLS = [
   {id: '1',title: 'Seguidores',route: '/ListFollowers',icon: 'account-group'},
-  {id: '2',title: 'Ruleta',route: '/SmartRoulette',icon: 'ferris-wheel'},
-//   {id: '3', title: 'Puntos de Seguidores', route: '/Mods/PointsManager', icon: 'database-marker'},
+  {id: '2',title: 'Ruleta',route: '/SmartRoulette',icon: 'ship-wheel'},
+  {id: '3', title: 'Juego de Barcos', route: '/Ships', icon: 'ferris-wheel'},
 ];
 
 export default function ToolsMods() {

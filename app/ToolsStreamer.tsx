@@ -39,7 +39,7 @@ function decodeJWT(token: string): DecodedToken | null {
 
 const STREAMER_TOOLS = [
     { id: '1', title: 'Ruleta', route: '/SmartRoulette', icon: 'clover' },
-    // { id: '2', title: 'Guerra de Barcos', route: '/Streamer/ShipWar', icon: 'ship-wheel' },
+    { id: '2', title: 'Juego de Barcos', route: '/Ships', icon: 'ferris-wheel'},
     // { id: '3', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
     // { id: '4', title: 'Listado Usuarios', route: '/Streamer/UserList', icon: 'account-details' },
     // { id: '5', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
