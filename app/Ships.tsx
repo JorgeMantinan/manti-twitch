@@ -241,15 +241,19 @@ export default function Ships() {
     const token = await getToken();
 
     const res = await fetch(
-      "https://manti-twitch-backend.onrender.com/api/twitch/subs",
+      "https://manti-twitch-backend.onrender.com/api/subs",
       {
-        headers: { Authorization: `Bearer ${token}` },
-      },
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
     );
 
     const data = await res.json();
 
-    const parsed = data.data.map((s: any) => ({
+    const parsed = data.subscribers.map((s: any) => ({
       name: s.user_name,
       isSub: true,
     }));
@@ -258,7 +262,7 @@ export default function Ships() {
       const existing = new Set(prev.map((p) => p.name.toLowerCase()));
 
       const newOnes = parsed.filter(
-        (p: any) => !existing.has(p.name.toLowerCase()),
+        (p: any) => !existing.has(p.name.toLowerCase())
       );
 
       return [...prev, ...newOnes];
