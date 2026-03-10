@@ -149,10 +149,21 @@ export default function Ships() {
   const addParticipant = () => {
     if (!inputName.trim()) return;
 
-    setParticipants((prev) => [
-      ...prev,
-      { name: inputName.trim(), isSub: isSubInput },
-    ]);
+    setParticipants(prev => {
+      const exists = prev.some(
+        p => p.name.toLowerCase() === inputName.trim().toLowerCase()
+      );
+
+      if (exists) return prev;
+
+      return [
+        ...prev,
+        {
+          name: inputName.trim(),
+          isSub: isSubInput
+        }
+      ];
+    });
 
     setInputName("");
   };
@@ -178,7 +189,7 @@ export default function Ships() {
       },
       body: JSON.stringify({
         keyword: raffleWord,
-        streamer,
+        streamer: role === "mod" ? streamer : undefined,
       }),
     });
 
@@ -203,7 +214,16 @@ export default function Ships() {
       isSub: p.isSub,
     }));
 
-    setParticipants(parsed);
+    setParticipants((prev) => {
+      const existing = new Set(prev.map((p) => p.name.toLowerCase()));
+
+      const newOnes = parsed.filter(
+        (p: any) => !existing.has(p.name.toLowerCase()),
+      );
+
+      return [...prev, ...newOnes];
+    });
+
     setRaffleRunning(false);
   };
 
@@ -230,7 +250,15 @@ export default function Ships() {
       isSub: true,
     }));
 
-    setParticipants(parsed);
+    setParticipants((prev) => {
+      const existing = new Set(prev.map((p) => p.name.toLowerCase()));
+
+      const newOnes = parsed.filter(
+        (p: any) => !existing.has(p.name.toLowerCase()),
+      );
+
+      return [...prev, ...newOnes];
+    });
   };
 
   /*
@@ -380,12 +408,18 @@ export default function Ships() {
         <Text style={styles.setupTitle}>Batalla Naval</Text>
 
         {role === "mod" && (
-          <TextInput
-            style={styles.textInput}
-            placeholder="Streamer channel"
-            value={streamer}
-            onChangeText={setStreamer}
-          />
+          <>
+            <Text style={{ color: "#AAA", marginBottom: 4 }}>
+              Canal donde hacer el raffle
+            </Text>
+
+            <TextInput
+              style={styles.textInput}
+              placeholder="Nombre del streamer"
+              value={streamer}
+              onChangeText={setStreamer}
+            />
+          </>
         )}
 
         {role !== "viewer" && (
