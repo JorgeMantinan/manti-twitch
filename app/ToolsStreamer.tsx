@@ -36,6 +36,7 @@ function decodeJWT(token: string): DecodedToken | null {
     return null;
   }
 }
+const ROLE = "streamer";
 
 const STREAMER_TOOLS = [
     { id: '1', title: 'Ruleta', route: '/SmartRoulette', icon: 'clover' },
@@ -106,7 +107,8 @@ export default function ToolsStreamer() {
       router.push({
         pathname: "/SmartRoulette",
         params: {
-          data: JSON.stringify(participants)
+          data: JSON.stringify(participants),
+          role: ROLE
         }
       });
       return;

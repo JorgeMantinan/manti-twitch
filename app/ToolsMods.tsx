@@ -47,6 +47,8 @@ function decodeJWT(token: string): DecodedToken | null {
   }
 }
 
+const ROLE = "mod";
+
 const MOD_TOOLS = [
   {id: '1',title: 'Seguidores',route: '/ListFollowers',icon: 'account-group'},
   {id: '2',title: 'Ruleta',route: '/SmartRoulette',icon: 'ship-wheel'},
@@ -112,7 +114,8 @@ export default function ToolsMods() {
       router.push({
         pathname: "/SmartRoulette",
         params: {
-          data: JSON.stringify(participants)
+          data: JSON.stringify(participants),
+          role: ROLE
         }
       });
       return;

@@ -12,6 +12,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
+const ROLE = "viewer";
+
 const USER_TOOLS = [
   { 
     id: '1', 
@@ -34,7 +36,7 @@ export default function ToolsUsers() {
   const handlePress = (route: string) => {
     router.push({
       pathname: route as any,
-      params: { token }
+      params: { token, role: ROLE }
     });
   };
 

@@ -26,6 +26,7 @@ const MAX_SLICES = 120;
 
 export default function SmartRoulette() {
   const params = useLocalSearchParams();
+  
 
   const initialParticipants = params.data
     ? JSON.parse(params.data as string)
@@ -42,7 +43,9 @@ export default function SmartRoulette() {
   const [running, setRunning] = useState(false);
   const [newUser, setNewUser] = useState("");
   const [keyword, setKeyword] = useState("!sorteo");
-  const [role, setRole] = useState<Role>("viewer");
+  const [streamer, setStreamer] = useState("");
+  const role:Role = (params.role as Role) || "viewer";
+  // const [role, setRole] = useState<Role>("viewer");
 
   const spinAnim = useRef(new Animated.Value(0)).current;
 
@@ -67,53 +70,53 @@ TOKEN
 JWT PARSER
 */
 
-  const parseJWT = (token: string) => {
-    try {
-      const payload = token.split(".")[1];
-      return JSON.parse(atob(payload));
-    } catch {
-      return null;
-    }
-  };
+  // const parseJWT = (token: string) => {
+  //   try {
+  //     const payload = token.split(".")[1];
+  //     return JSON.parse(atob(payload));
+  //   } catch {
+  //     return null;
+  //   }
+  // };
 
   /*
 ROLE SYSTEM
 */
 
-  const determineRole = (decoded: any): Role => {
-    if (!decoded) return "viewer";
+  // const determineRole = (decoded: any): Role => {
+  //   if (!decoded) return "viewer";
 
-    let scopes: string[] = [];
+  //   let scopes: string[] = [];
 
-    if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
-    else if (typeof decoded.scopes === "string")
-      scopes = decoded.scopes.split(" ");
-    else if (typeof decoded.scope === "string")
-      scopes = decoded.scope.split(" ");
+  //   if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
+  //   else if (typeof decoded.scopes === "string")
+  //     scopes = decoded.scopes.split(" ");
+  //   else if (typeof decoded.scope === "string")
+  //     scopes = decoded.scope.split(" ");
 
-    if (scopes.includes("channel:read:subscriptions")) return "streamer";
+  //   if (scopes.includes("channel:read:subscriptions")) return "streamer";
 
-    if (scopes.includes("moderator:read:followers")) return "mod";
+  //   if (scopes.includes("moderator:read:followers")) return "mod";
 
-    return "viewer";
-  };
+  //   return "viewer";
+  // };
 
-  const checkAuth = async () => {
-    const token = await getToken();
+  // const checkAuth = async () => {
+  //   const token = await getToken();
 
-    if (!token) {
-      setRole("viewer");
-      return;
-    }
+  //   if (!token) {
+  //     setRole("viewer");
+  //     return;
+  //   }
 
-    const decoded = parseJWT(token);
+  //   const decoded = parseJWT(token);
 
-    setRole(determineRole(decoded));
-  };
+  //   setRole(determineRole(decoded));
+  // };
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  // useEffect(() => {
+  //   checkAuth();
+  // }, []);
 
   /*
 WEIGHT SYSTEM
@@ -255,6 +258,7 @@ BACKEND
       },
       body: JSON.stringify({
         keyword,
+        streamer: role === "mod" ? streamer : undefined,
         subMult: 2,
         giftMult: 2,
       }),
@@ -396,6 +400,15 @@ UI
             value={keyword}
             onChangeText={setKeyword}
             style={styles.input}
+          />
+        )}
+
+        {role === "mod" && (
+          <TextInput
+            style={styles.input}
+            placeholder="Streamer channel"
+            value={streamer}
+            onChangeText={setStreamer}
           />
         )}
 

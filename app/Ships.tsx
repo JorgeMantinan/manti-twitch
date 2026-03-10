@@ -14,6 +14,7 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
+import { useLocalSearchParams } from "expo-router";
 
 const { width, height } = Dimensions.get("window");
 
@@ -29,6 +30,8 @@ const FONDO_OCEANO = require("../assets/images/sea-waves.jpg");
 type Role = "viewer" | "mod" | "streamer";
 
 export default function Ships() {
+  const params = useLocalSearchParams();
+
   const [gameState, setGameState] = useState<"setup" | "playing">("setup");
 
   const [participants, setParticipants] = useState<any[]>([]);
@@ -43,7 +46,8 @@ export default function Ships() {
   const shipsRef = useRef<any[]>([]);
   const bulletsRef = useRef<any[]>([]);
 
-  const [role, setRole] = useState<Role>("viewer");
+  const role:Role = (params.role as Role) || "viewer";
+  // const [role, setRole] = useState<Role>("viewer");
 
   const [streamer, setStreamer] = useState("");
   const [raffleWord, setRaffleWord] = useState("!sorteo");
@@ -62,48 +66,48 @@ export default function Ships() {
   JWT PARSER
   */
 
-  const parseJWT = (token: string) => {
-    try {
-      const payload = token.split(".")[1];
-      return JSON.parse(atob(payload));
-    } catch {
-      return null;
-    }
-  };
+  // const parseJWT = (token: string) => {
+  //   try {
+  //     const payload = token.split(".")[1];
+  //     return JSON.parse(atob(payload));
+  //   } catch {
+  //     return null;
+  //   }
+  // };
 
   /*
   ROLE SYSTEM
   */
 
-  const determineRole = (decoded: any): Role => {
-    if (!decoded) return "viewer";
+  // const determineRole = (decoded: any): Role => {
+  //   if (!decoded) return "viewer";
 
-    let scopes: string[] = [];
+  //   let scopes: string[] = [];
 
-    if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
-    else if (typeof decoded.scopes === "string")
-      scopes = decoded.scopes.split(" ");
-    else if (typeof decoded.scope === "string")
-      scopes = decoded.scope.split(" ");
+  //   if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
+  //   else if (typeof decoded.scopes === "string")
+  //     scopes = decoded.scopes.split(" ");
+  //   else if (typeof decoded.scope === "string")
+  //     scopes = decoded.scope.split(" ");
 
-    if (scopes.includes("channel:read:subscriptions")) return "streamer";
+  //   if (scopes.includes("channel:read:subscriptions")) return "streamer";
 
-    if (scopes.includes("moderator:read:followers")) return "mod";
+  //   if (scopes.includes("moderator:read:followers")) return "mod";
 
-    return "viewer";
-  };
+  //   return "viewer";
+  // };
 
-  const checkAuth = async () => {
-    const token = await getToken();
-    if (!token) return;
+  // const checkAuth = async () => {
+  //   const token = await getToken();
+  //   if (!token) return;
 
-    const decoded = parseJWT(token);
-    setRole(determineRole(decoded));
-  };
+  //   const decoded = parseJWT(token);
+  //   setRole(determineRole(decoded));
+  // };
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  // useEffect(() => {
+  //   checkAuth();
+  // }, []);
 
   /*
   STORAGE LOAD
