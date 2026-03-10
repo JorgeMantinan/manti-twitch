@@ -113,7 +113,10 @@ export default function ToolsStreamer() {
       });
       return;
     }
-    router.push(route as RelativePathString);
+    router.push({
+      pathname: route as RelativePathString,
+      params: { role: ROLE }
+    });
   };
 
   if (!isAuthorized) return null;
