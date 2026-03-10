@@ -1,4 +1,3 @@
-// Ships.tsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 const { width, height } = Dimensions.get("window");
 
@@ -26,9 +26,9 @@ const BULLET_SIZE = 10;
 
 const FONDO_OCEANO = require("../assets/images/sea-waves.jpg");
 
-export default function Ships() {
-  /* STATE */
+type Role = "viewer" | "mod" | "streamer";
 
+export default function Ships() {
   const [gameState, setGameState] = useState<"setup" | "playing">("setup");
 
   const [participants, setParticipants] = useState<any[]>([]);
@@ -43,76 +43,108 @@ export default function Ships() {
   const shipsRef = useRef<any[]>([]);
   const bulletsRef = useRef<any[]>([]);
 
-  /* TWITCH */
+  const [role, setRole] = useState<Role>("viewer");
 
   const [streamer, setStreamer] = useState("");
-  const [raffleWord, setRaffleWord] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [raffleWord, setRaffleWord] = useState("!sorteo");
+  const [raffleRunning, setRaffleRunning] = useState(false);
 
-  const [scopes, setScopes] = useState<string[]>([]);
+  /*
+  TOKEN
+  */
 
-  const raffleActive = useRef(false);
-  const socketRef = useRef<WebSocket | null>(null);
+  const getToken = async () => {
+    if (Platform.OS === "web") return localStorage.getItem("userToken");
+    return await SecureStore.getItemAsync("userToken");
+  };
 
-  /* GET SCOPES */
+  /*
+  JWT PARSER
+  */
+
+  const parseJWT = (token: string) => {
+    try {
+      const payload = token.split(".")[1];
+      return JSON.parse(atob(payload));
+    } catch {
+      return null;
+    }
+  };
+
+  /*
+  ROLE SYSTEM
+  */
+
+  const determineRole = (decoded: any): Role => {
+    if (!decoded) return "viewer";
+
+    let scopes: string[] = [];
+
+    if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
+    else if (typeof decoded.scopes === "string")
+      scopes = decoded.scopes.split(" ");
+    else if (typeof decoded.scope === "string")
+      scopes = decoded.scope.split(" ");
+
+    if (scopes.includes("channel:read:subscriptions")) return "streamer";
+
+    if (scopes.includes("moderator:read:followers")) return "mod";
+
+    return "viewer";
+  };
+
+  const checkAuth = async () => {
+    const token = await getToken();
+    if (!token) return;
+
+    const decoded = parseJWT(token);
+    setRole(determineRole(decoded));
+  };
 
   useEffect(() => {
-    if (Platform.OS === "web") {
-      const params = new URLSearchParams(window.location.search);
-      const scope = params.get("scope");
-
-      if (scope) setScopes(scope.split(" "));
-    }
+    checkAuth();
   }, []);
 
-  /* STORAGE LOAD */
+  /*
+  STORAGE LOAD
+  */
 
   useEffect(() => {
     const loadData = async () => {
       try {
         let savedData = null;
 
-        if (Platform.OS === "web") {
-          savedData = localStorage.getItem(STORAGE_KEY);
-        } else {
-          savedData = await AsyncStorage.getItem(STORAGE_KEY);
-        }
+        if (Platform.OS === "web") savedData = localStorage.getItem(STORAGE_KEY);
+        else savedData = await AsyncStorage.getItem(STORAGE_KEY);
 
         if (savedData) {
           const parsed = JSON.parse(savedData);
-
           if (Array.isArray(parsed)) setParticipants(parsed);
         }
-      } catch (e) {
-        console.log(e);
-      }
+      } catch {}
     };
 
     loadData();
   }, []);
 
-  /* STORAGE SAVE */
+  /*
+  STORAGE SAVE
+  */
 
   useEffect(() => {
     const saveData = async () => {
       const data = JSON.stringify(participants);
 
-      try {
-        if (Platform.OS === "web") {
-          localStorage.setItem(STORAGE_KEY, data);
-        } else {
-          await AsyncStorage.setItem(STORAGE_KEY, data);
-        }
-      } catch (e) {
-        console.log(e);
-      }
+      if (Platform.OS === "web") localStorage.setItem(STORAGE_KEY, data);
+      else await AsyncStorage.setItem(STORAGE_KEY, data);
     };
 
     saveData();
   }, [participants]);
 
-  /* ADD PARTICIPANT */
+  /*
+  PARTICIPANTS
+  */
 
   const addParticipant = () => {
     if (!inputName.trim()) return;
@@ -125,86 +157,96 @@ export default function Ships() {
     setInputName("");
   };
 
-  /* CHAT RAFFLE */
-
-  const startRaffle = () => {
-    if (!streamer || !raffleWord) return;
-
-    raffleActive.current = true;
-
-    const nick = "justinfan" + Math.floor(Math.random() * 99999);
-
-    const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
-
-    socketRef.current = socket;
-
-    socket.onopen = () => {
-      socket.send("PASS SCHMOOPIIE");
-      socket.send(`NICK ${nick}`);
-      socket.send(`JOIN #${streamer}`);
-    };
-
-    socket.onmessage = (event) => {
-      const msg = event.data;
-
-      if (msg.includes("PING")) {
-        socket.send("PONG :tmi.twitch.tv");
-        return;
-      }
-
-      const match = msg.match(
-        /:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.*)/,
-      );
-
-      if (match) {
-        const username = match[1];
-        const message = match[2];
-
-        if (
-          raffleActive.current &&
-          message.toLowerCase().includes(raffleWord.toLowerCase())
-        ) {
-          setParticipants((prev) => {
-            if (prev.find((p) => p.name === username)) return prev;
-
-            return [...prev, { name: username, isSub: false }];
-          });
-        }
-      }
-    };
+  const removeParticipant = (index: number) => {
+    setParticipants((p) => p.filter((_, i) => i !== index));
   };
 
-  const stopRaffle = () => {
-    raffleActive.current = false;
+  /*
+  RAFFLE
+  */
 
-    socketRef.current?.close();
+  const startRaffle = async () => {
+    if (role === "viewer") return;
+
+    const token = await getToken();
+
+    await fetch("https://manti-twitch-backend.onrender.com/api/raffle/start", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        keyword: raffleWord,
+        streamer,
+      }),
+    });
+
+    setRaffleRunning(true);
   };
 
-  /* FOLLOWERS */
+  const stopRaffle = async () => {
+    const token = await getToken();
 
-  const fetchFollowers = () => {
-    console.log("followers between", dateFrom, dateTo);
+    const res = await fetch(
+      "https://manti-twitch-backend.onrender.com/api/raffle/stop",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    const data = await res.json();
+
+    const parsed = data.data.map((p: any) => ({
+      name: p.username,
+      isSub: p.isSub,
+    }));
+
+    setParticipants(parsed);
+    setRaffleRunning(false);
   };
 
-  /* SUBS */
+  /*
+  SUBS
+  */
 
-  const fetchSubs = () => {
-    console.log("get subs");
+  const fetchSubs = async () => {
+    if (role !== "streamer") return;
+
+    const token = await getToken();
+
+    const res = await fetch(
+      "https://manti-twitch-backend.onrender.com/api/twitch/subs",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    const data = await res.json();
+
+    const parsed = data.data.map((s: any) => ({
+      name: s.user_name,
+      isSub: true,
+    }));
+
+    setParticipants(parsed);
   };
 
-  /* CLEAR */
+  /*
+  CLEAR
+  */
 
   const clearAll = async () => {
     setParticipants([]);
 
-    if (Platform.OS === "web") {
-      localStorage.removeItem(STORAGE_KEY);
-    } else {
-      await AsyncStorage.removeItem(STORAGE_KEY);
-    }
+    if (Platform.OS === "web") localStorage.removeItem(STORAGE_KEY);
+    else await AsyncStorage.removeItem(STORAGE_KEY);
   };
 
-  /* START BATTLE */
+  /*
+  START BATTLE
+  */
 
   const startBattle = () => {
     if (participants.length < 2) return;
@@ -238,7 +280,9 @@ export default function Ships() {
     setGameState("playing");
   };
 
-  /* GAME LOOP */
+  /*
+  GAME LOOP
+  */
 
   useEffect(() => {
     if (gameState !== "playing" || winner) return;
@@ -293,7 +337,8 @@ export default function Ships() {
           const targets = aliveShips.filter((e) => e.id !== s.id);
 
           if (targets.length > 0) {
-            const target = targets[Math.floor(Math.random() * targets.length)];
+            const target =
+              targets[Math.floor(Math.random() * targets.length)];
 
             const angle = Math.atan2(target.y - s.y, target.x - s.x);
 
@@ -310,7 +355,6 @@ export default function Ships() {
 
       if (aliveShips.length === 1 && allShips.length > 1) {
         setWinner(aliveShips[0]);
-
         setFinalRank(
           [...allShips].sort((a, b) => b.kills - a.kills).slice(0, 5),
         );
@@ -326,69 +370,57 @@ export default function Ships() {
     return () => clearInterval(interval);
   }, [gameState, winner]);
 
-  /* SETUP SCREEN */
+  /*
+  SETUP SCREEN
+  */
 
   if (gameState === "setup") {
     return (
       <View style={styles.setupContainer}>
         <Text style={styles.setupTitle}>Batalla Naval</Text>
 
-        {(scopes.includes("moderator") || scopes.includes("broadcaster")) && (
+        {role === "mod" && (
           <TextInput
             style={styles.textInput}
-            placeholder="Streamer"
+            placeholder="Streamer channel"
             value={streamer}
             onChangeText={setStreamer}
           />
         )}
 
-        {scopes.includes("moderator") && (
-          <View>
+        {role !== "viewer" && (
+          <>
             <TextInput
               style={styles.textInput}
-              placeholder="Palabra raffle"
+              placeholder="Keyword"
               value={raffleWord}
               onChangeText={setRaffleWord}
             />
 
-            <TouchableOpacity style={styles.startBtn} onPress={startRaffle}>
-              <Text style={styles.startBtnText}>RAFFLE START</Text>
-            </TouchableOpacity>
+            {!raffleRunning && (
+              <TouchableOpacity style={styles.startBtn} onPress={startRaffle}>
+                <Text style={styles.startBtnText}>START RAFFLE</Text>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity style={styles.startBtn} onPress={stopRaffle}>
-              <Text style={styles.startBtnText}>STOP RAFFLE</Text>
-            </TouchableOpacity>
-
-            <TextInput
-              style={styles.textInput}
-              placeholder="Fecha inicio"
-              value={dateFrom}
-              onChangeText={setDateFrom}
-            />
-
-            <TextInput
-              style={styles.textInput}
-              placeholder="Fecha fin"
-              value={dateTo}
-              onChangeText={setDateTo}
-            />
-
-            <TouchableOpacity style={styles.startBtn} onPress={fetchFollowers}>
-              <Text style={styles.startBtnText}>OBTENER FOLLOWERS</Text>
-            </TouchableOpacity>
-          </View>
+            {raffleRunning && (
+              <TouchableOpacity style={styles.startBtn} onPress={stopRaffle}>
+                <Text style={styles.startBtnText}>STOP RAFFLE</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
 
-        {scopes.includes("broadcaster") && (
+        {role === "streamer" && (
           <TouchableOpacity style={styles.startBtn} onPress={fetchSubs}>
-            <Text style={styles.startBtnText}>OBTENER SUBS</Text>
+            <Text style={styles.startBtnText}>GET SUBS</Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.inputBox}>
           <TextInput
             style={styles.textInput}
-            placeholder="Escribe un nombre..."
+            placeholder="Nombre"
             value={inputName}
             onChangeText={setInputName}
           />
@@ -400,13 +432,8 @@ export default function Ships() {
             ]}
             onPress={() => setIsSubInput(!isSubInput)}
           >
-            <Text
-              style={{
-                fontWeight: "bold",
-                color: isSubInput ? "#000" : "#FFF",
-              }}
-            >
-              {isSubInput ? "👑 SUB" : "🚤 NORMAL"}
+            <Text style={{ color: "#FFF", fontWeight: "bold" }}>
+              {isSubInput ? "👑 SUB" : "🚤"}
             </Text>
           </TouchableOpacity>
 
@@ -418,20 +445,12 @@ export default function Ships() {
         <ScrollView style={styles.participantList}>
           {participants.map((p, i) => (
             <View key={i} style={styles.participantItem}>
-              <Text
-                style={{ color: p.isSub ? "#FFD700" : "#FFF", fontSize: 18 }}
-              >
+              <Text style={{ color: p.isSub ? "#FFD700" : "#FFF" }}>
                 {p.isSub ? "👑 " : "🚤 "} {p.name}
               </Text>
 
-              <TouchableOpacity
-                onPress={() =>
-                  setParticipants(participants.filter((_, idx) => idx !== i))
-                }
-              >
-                <Text style={{ color: "#ff4444", fontWeight: "bold" }}>
-                  Quitar
-                </Text>
+              <TouchableOpacity onPress={() => removeParticipant(i)}>
+                <Text style={{ color: "#ff4444" }}>Quitar</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -448,10 +467,13 @@ export default function Ships() {
     );
   }
 
-  /* GAME SCREEN */
+  /*
+  GAME SCREEN
+  */
 
   return (
     <ImageBackground source={FONDO_OCEANO} style={styles.ocean}>
+      {/* SCOREBOARD */}
       <View style={styles.scoreboard}>
         <Text style={styles.scoreTitle}>⚓ EN VIVO</Text>
 
@@ -464,6 +486,7 @@ export default function Ships() {
             </Text>
           ))}
       </View>
+
       {ships.map((ship) => (
         <View
           key={ship.id}
@@ -490,6 +513,7 @@ export default function Ships() {
           </Text>
         </View>
       ))}
+
       {bullets.map((b, i) => (
         <View
           key={i}
@@ -503,7 +527,8 @@ export default function Ships() {
           ]}
         />
       ))}
-      /* WINNER MODAL */
+
+      {/* WINNER MODAL */}
       <Modal visible={winner !== null} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
