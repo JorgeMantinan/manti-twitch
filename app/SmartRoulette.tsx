@@ -135,24 +135,22 @@ ROLE SYSTEM
   */
   useEffect(() => {
 
-    socketRef.current = io("https://manti-twitch-backend.onrender.com", {
-      transports: ["polling", "websocket"],
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000
+    if (socketRef.current) return;
+
+    const socket = io("https://manti-twitch-backend.onrender.com");
+
+    socket.on("connect", () => {
+      console.log("🟢 SOCKET RULETA conectado");
     });
 
-    socketRef.current.on("connect", () => {
-      console.log("✅ Socket conectado en Ruleta:", socketRef.current.id);
-    });
-
-    socketRef.current.on("newParticipant", (data: SocketData) => {
-      console.log("📩 Participante recibido:", data.participant.username);
+    socket.on("newParticipant", (data: SocketData) => {
+      console.log("📩 RULETA recibió:", data.participant.username);
 
       setParticipants((prev) => {
-
         const exists = prev.some(
-          (p) => p.username.toLowerCase() === data.participant.username.toLowerCase()
+          (p) =>
+            p.username.toLowerCase() ===
+            data.participant.username.toLowerCase()
         );
 
         if (exists) return prev;
@@ -161,18 +159,17 @@ ROLE SYSTEM
           ...prev,
           {
             username: data.participant.username,
-            weight: data.participant.points || 1
-          }
+            weight: data.participant.points || 1,
+          },
         ];
       });
     });
 
-    socketRef.current.on("disconnect", () => {
-      console.log("❌ Socket desconectado");
-    });
+    socketRef.current = socket;
 
     return () => {
-      socketRef.current?.disconnect();
+      socket.disconnect();
+      socketRef.current = null;
     };
 
   }, []);
@@ -341,12 +338,21 @@ BACKEND
 
     const data = await res.json();
 
-    const parsed = data.data.map((p: any) => ({
+    const parsed: Participant[] = data.data.map((p: any) => ({
       username: p.username,
       weight: p.points,
     }));
 
-    setParticipants(parsed);
+
+    setParticipants((prev) => {
+      const existing = new Set(prev.map((p) => p.username.toLowerCase()));
+
+      const newOnes = parsed.filter(
+        (p) => !existing.has(p.username.toLowerCase())
+      );
+
+      return [...prev, ...newOnes];
+    });
 
     setRunning(false);
   };
@@ -525,8 +531,8 @@ UI
         </TouchableOpacity>
 
         <ScrollView style={styles.list}>
-          {participants.map((p) => (
-            <View key={p.username} style={styles.row}>
+          {participants.map((p, i) => (
+            <View key={p.username + i} style={styles.row}>
               <Text>{p.username}</Text>
 
               <TouchableOpacity onPress={() => removeParticipant(p.username)}>
