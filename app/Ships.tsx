@@ -234,7 +234,7 @@ export default function Ships() {
       },
       body: JSON.stringify({
         keyword: raffleWord,
-        streamer: role === "mod" ? streamer : undefined,
+        selectedStreamer: role === "mod" ? streamer : undefined,
       }),
     });
 
