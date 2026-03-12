@@ -167,6 +167,8 @@ export default function Ships() {
       streamer: role === "mod" ? streamer : "default"
     });
 
+    
+
     // Añadimos el tipo aquí (data: SocketData)
     socketRef.current.on("newParticipant", (data: SocketData) => {
       setParticipants((prev) => {

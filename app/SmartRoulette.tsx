@@ -139,11 +139,15 @@ ROLE SYSTEM
 
     const socket = io("https://manti-twitch-backend.onrender.com");
 
+    socketRef.current = socket;
+
     socket.on("connect", () => {
       console.log("🟢 SOCKET RULETA conectado");
-    });
-    socketRef.current.emit("joinRoom", {
-      streamer: role === "mod" ? streamer : "default"
+
+      socket.emit("joinRoom", {
+        streamer: role === "mod" ? streamer : "default"
+      });
+
     });
 
     socket.on("newParticipant", (data: SocketData) => {
