@@ -142,6 +142,9 @@ ROLE SYSTEM
     socket.on("connect", () => {
       console.log("🟢 SOCKET RULETA conectado");
     });
+    socketRef.current.emit("joinRoom", {
+      streamer: role === "mod" ? streamer : "default"
+    });
 
     socket.on("newParticipant", (data: SocketData) => {
       console.log("📩 RULETA recibió:", data.participant.username);
@@ -172,7 +175,7 @@ ROLE SYSTEM
       socketRef.current = null;
     };
 
-  }, []);
+  }, [streamer]);
 
   /*
 WEIGHT SYSTEM

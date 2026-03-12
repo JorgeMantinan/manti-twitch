@@ -163,6 +163,9 @@ export default function Ships() {
   */
   useEffect(() => {
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
+    socketRef.current.emit("joinRoom", {
+      streamer: role === "mod" ? streamer : "default"
+    });
 
     // Añadimos el tipo aquí (data: SocketData)
     socketRef.current.on("newParticipant", (data: SocketData) => {
@@ -185,7 +188,7 @@ export default function Ships() {
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
-  }, []);
+  }, [streamer]);
 
   /*
   PARTICIPANTS
