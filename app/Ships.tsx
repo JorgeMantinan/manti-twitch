@@ -15,6 +15,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams } from "expo-router";
+import { io } from "socket.io-client";
 
 const { width, height } = Dimensions.get("window");
 
@@ -27,9 +28,20 @@ const BULLET_SIZE = 10;
 
 const FONDO_OCEANO = require("../assets/images/sea-waves.jpg");
 
+interface SocketData {
+  participant: {
+    username: string;
+    isSub: boolean;
+    points: number;
+    giftsSent: number;
+  };
+  totalCount: number;
+}
+
 type Role = "viewer" | "mod" | "streamer";
 
 export default function Ships() {
+  const socketRef = useRef<any>(null);  
   const params = useLocalSearchParams();
 
   const [gameState, setGameState] = useState<"setup" | "playing">("setup");
@@ -145,6 +157,35 @@ export default function Ships() {
 
     saveData();
   }, [participants]);
+
+  /*
+   3. SOCKETS listener
+  */
+  useEffect(() => {
+    socketRef.current = io("https://manti-twitch-backend.onrender.com");
+
+    // Añadimos el tipo aquí (data: SocketData)
+    socketRef.current.on("newParticipant", (data: SocketData) => {
+      setParticipants((prev) => {
+        const exists = prev.some(
+          (p) => p.name.toLowerCase() === data.participant.username.toLowerCase()
+        );
+        if (exists) return prev;
+
+        return [
+          ...prev,
+          {
+            name: data.participant.username,
+            isSub: data.participant.isSub,
+          },
+        ];
+      });
+    });
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, []);
 
   /*
   PARTICIPANTS
