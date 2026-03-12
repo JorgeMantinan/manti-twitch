@@ -2,7 +2,7 @@
   "name": "ruleta-frontend",
   "main": "expo-router/entry",
   "homepage": "https://jorgemantinan.github.io/manti-twitch/",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
