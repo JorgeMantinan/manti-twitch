@@ -14,11 +14,22 @@ import {
 import Svg, { G, Path, Text as SvgText } from "react-native-svg";
 import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams } from "expo-router";
+import { io } from "socket.io-client";
 
 type Participant = {
   username: string;
   weight: number;
 };
+
+interface SocketData {
+  participant: {
+    username: string;
+    isSub: boolean;
+    points: number;
+    giftsSent: number;
+  };
+  totalCount: number;
+}
 
 type Role = "viewer" | "mod" | "streamer";
 
@@ -26,7 +37,8 @@ const MAX_SLICES = 120;
 
 export default function SmartRoulette() {
   const params = useLocalSearchParams();
-  
+
+  const socketRef = useRef<any>(null);
 
   const initialParticipants = params.data
     ? JSON.parse(params.data as string)
@@ -117,6 +129,35 @@ ROLE SYSTEM
   // useEffect(() => {
   //   checkAuth();
   // }, []);
+
+  /*
+    SOCKET REAL-TIME LISTENER
+  */
+  useEffect(() => {
+    // Conectar al servidor
+    socketRef.current = io("https://manti-twitch-backend.onrender.com");
+
+    socketRef.current.on("newParticipant", (data: SocketData) => {
+      setParticipants((prev) => {
+        const exists = prev.some(
+          (p) => p.username.toLowerCase() === data.participant.username.toLowerCase()
+        );
+        if (exists) return prev;
+
+        return [
+          ...prev,
+          {
+            username: data.participant.username,
+            weight: data.participant.points || 1,
+          },
+        ];
+      });
+    });
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, []);
 
   /*
 WEIGHT SYSTEM
@@ -258,7 +299,7 @@ BACKEND
       },
       body: JSON.stringify({
         keyword,
-        streamer: role === "mod" ? streamer : undefined,
+        selectedStreamer: role === "mod" ? streamer : undefined,
         subMult: 2,
         giftMult: 2,
       }),
