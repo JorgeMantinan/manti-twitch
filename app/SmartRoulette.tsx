@@ -134,25 +134,42 @@ ROLE SYSTEM
     SOCKET REAL-TIME LISTENER
   */
   useEffect(() => {
-    // Conectar al servidor
-    socketRef.current = io("https://manti-twitch-backend.onrender.com");
-
-    socketRef.current.on("newParticipant", (data: SocketData) => {
-      setParticipants((prev) => {
-        const exists = prev.some(
-          (p) => p.username.toLowerCase() === data.participant.username.toLowerCase()
-        );
-        if (exists) return prev;
-
-        return [
-          ...prev,
-          {
-            username: data.participant.username,
-            weight: data.participant.points || 1,
-          },
-        ];
-      });
+    socketRef.current = io("https://manti-twitch-backend.onrender.com", {
+      transports: ["websocket"],
+      forceNew: true
     });
+
+    // LOG DE CONTROL: Para saber si realmente conectó
+    socketRef.current.on("connect", () => {
+      console.log("✅ Conectado al servidor de Sockets!");
+    });
+
+
+    // TEST DEV
+    socketRef.current.on("newParticipant", (data: SocketData) => {
+        setParticipants((prev) => [
+            ...prev,
+            { username: data.participant.username, weight: 1 }
+        ]);
+    });
+
+    // socketRef.current.on("newParticipant", (data: SocketData) => {
+    //   console.log("📩 Nuevo participante recibido:", data);
+    //   setParticipants((prev) => {
+    //     const exists = prev.some(
+    //       (p) => p.username.toLowerCase() === data.participant.username.toLowerCase()
+    //     );
+    //     if (exists) return prev;
+
+    //     return [
+    //       ...prev,
+    //       {
+    //         username: data.participant.username,
+    //         weight: data.participant.points || 1,
+    //       },
+    //     ];
+    //   });
+    // });
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
@@ -517,6 +534,21 @@ UI
             </View>
           ))}
         </ScrollView>
+
+          {/** TEST DEV */}
+        <ScrollView style={styles.list}>
+          {participants.map((p, index) => (
+            <View key={index} style={styles.row}> 
+              {/* Cambia key={p.username} por key={index} para evitar errores de keys duplicadas */}
+              <Text>{index + 1}. {p.username} (Peso: {p.weight})</Text>
+              <TouchableOpacity onPress={() => removeParticipant(p.username)}>
+                <Text style={{ color: "red" }}>❌</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+        {/** FIN TEST DEV */}
+        
       </View>
     </View>
   );
