@@ -134,36 +134,47 @@ ROLE SYSTEM
     SOCKET REAL-TIME LISTENER
   */
   useEffect(() => {
-  // 1. Forzamos transporte WebSocket y log de conexión
+
     socketRef.current = io("https://manti-twitch-backend.onrender.com", {
-      transports: ["websocket"]
+      transports: ["polling", "websocket"],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
     });
 
     socketRef.current.on("connect", () => {
-      console.log("✅ Socket conectado en Ruleta");
+      console.log("✅ Socket conectado en Ruleta:", socketRef.current.id);
     });
 
-    // 2. Escuchamos el evento
     socketRef.current.on("newParticipant", (data: SocketData) => {
-      console.log("📩 Socket recibió a:", data.participant.username);
-      
+      console.log("📩 Participante recibido:", data.participant.username);
+
       setParticipants((prev) => {
-        // DEBUG: Quitamos el filtro de duplicados un momento para ver si entra algo
-        // const exists = prev.some(...); 
-        
+
+        const exists = prev.some(
+          (p) => p.username.toLowerCase() === data.participant.username.toLowerCase()
+        );
+
+        if (exists) return prev;
+
         return [
           ...prev,
           {
             username: data.participant.username,
-            weight: data.participant.points || 1,
-          },
+            weight: data.participant.points || 1
+          }
         ];
       });
     });
 
+    socketRef.current.on("disconnect", () => {
+      console.log("❌ Socket desconectado");
+    });
+
     return () => {
-      if (socketRef.current) socketRef.current.disconnect();
+      socketRef.current?.disconnect();
     };
+
   }, []);
 
   /*
