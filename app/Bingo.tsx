@@ -6,9 +6,14 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Platform,
 } from "react-native";
 
 import { io } from "socket.io-client";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
+import { useLocalSearchParams } from "expo-router";
 
 import { generateSpanishCard } from "../utils/bingoCard";
 import ParticipantsModal from "../components/BingoParticipantsModal";
@@ -26,6 +31,13 @@ type PlayerCard = {
 };
 
 export default function Bingo() {
+  /**System ROLES */
+  const params = useLocalSearchParams();
+  const role: Role = (params.role as Role) || "viewer";
+  const [streamer, setStreamer] = useState("");
+  const [raffleWord, setRaffleWord] = useState("!sorteo");
+  const [raffleRunning, setRaffleRunning] = useState(false);
+
   const [participants, setParticipants] = useState<any[]>([]);
   const [cards, setCards] = useState<PlayerCard[]>([]);
 
@@ -43,6 +55,11 @@ export default function Bingo() {
   const [auto, setAuto] = useState(false);
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const getToken = async () => {
+    if (Platform.OS === "web") return localStorage.getItem("userToken");
+    return await SecureStore.getItemAsync("userToken");
+  };
+
   /*
 ========================
 JOIN ROOM
@@ -50,16 +67,33 @@ JOIN ROOM
 */
 
   useEffect(() => {
-    socket.emit("bingo:join", { streamer: "default" });
+    socket.emit("joinRoom", {
+      streamer: role === "mod" ? streamer : "default",
+    });
+
+    socket.on("newParticipant", (data: any) => {
+      setParticipants((prev) => {
+        const exists = prev.some(
+          (p) =>
+            p.name.toLowerCase() === data.participant.username.toLowerCase(),
+        );
+
+        if (exists) return prev;
+
+        return [
+          ...prev,
+          {
+            name: data.participant.username,
+            isSub: data.participant.isSub,
+          },
+        ];
+      });
+    });
 
     socket.on("bingo:number", (n: number) => {
       setCurrent(n);
-
       setDrawn((p) => [...p, n]);
-
       animateBall();
-
-      //   speakNumber(n);
     });
 
     socket.on("bingo:line", (player) => {
@@ -74,10 +108,110 @@ JOIN ROOM
       setWinVisible(true);
     });
 
-    if (autoRef.current) {
-      clearInterval(autoRef.current);
-    }
-  }, []);
+    return () => {
+      socket.disconnect();
+
+      if (autoRef.current) {
+        clearInterval(autoRef.current);
+      }
+    };
+  }, [streamer]);
+
+  /*
+========================
+RAFFLE
+========================
+*/
+  const startRaffle = async () => {
+    if (role === "viewer") return;
+
+    const token = await getToken();
+
+    await fetch("https://manti-twitch-backend.onrender.com/api/raffle/start", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        keyword: raffleWord,
+        selectedStreamer: role === "mod" ? streamer : undefined,
+      }),
+    });
+
+    setRaffleRunning(true);
+  };
+
+  const stopRaffle = async () => {
+    const token = await getToken();
+
+    const res = await fetch(
+      "https://manti-twitch-backend.onrender.com/api/raffle/stop",
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    const data = await res.json();
+
+    const parsed = data.data.map((p: any) => ({
+      name: p.username,
+      isSub: p.isSub,
+    }));
+
+    setParticipants((prev) => {
+      const existing = new Set(prev.map((p) => p.name.toLowerCase()));
+
+      const newOnes = parsed.filter(
+        (p: any) => !existing.has(p.name.toLowerCase()),
+      );
+
+      return [...prev, ...newOnes];
+    });
+
+    setRaffleRunning(false);
+  };
+
+  /*
+========================
+GET SUBS
+========================
+*/
+
+  const fetchSubs = async () => {
+    if (role !== "streamer") return;
+
+    const token = await getToken();
+
+    const res = await fetch(
+      "https://manti-twitch-backend.onrender.com/api/subs",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const data = await res.json();
+
+    const parsed = data.subscribers.map((s: any) => ({
+      name: s.user_name,
+      isSub: true,
+    }));
+
+    setParticipants((prev) => {
+      const existing = new Set(prev.map((p) => p.name.toLowerCase()));
+
+      const newOnes = parsed.filter(
+        (p: any) => !existing.has(p.name.toLowerCase()),
+      );
+
+      return [...prev, ...newOnes];
+    });
+  };
 
   /*
 ========================
@@ -196,6 +330,15 @@ MARKED
         visible={modalVisible}
         participants={participants}
         setParticipants={setParticipants}
+        role={role}
+        streamer={streamer}
+        setStreamer={setStreamer}
+        raffleWord={raffleWord}
+        setRaffleWord={setRaffleWord}
+        raffleRunning={raffleRunning}
+        startRaffle={startRaffle}
+        stopRaffle={stopRaffle}
+        fetchSubs={fetchSubs}
         onStart={() => {
           setModalVisible(false);
           startGame();

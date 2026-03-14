@@ -13,10 +13,29 @@ type Participant = {
   name: string;
 };
 
+type Role = "viewer" | "mod" | "streamer";
+
 type Props = {
   visible: boolean;
+
   participants: Participant[];
   setParticipants: React.Dispatch<React.SetStateAction<Participant[]>>;
+
+  role: Role;
+
+  streamer: string;
+  setStreamer: (v: string) => void;
+
+  raffleWord: string;
+  setRaffleWord: (v: string) => void;
+
+  raffleRunning: boolean;
+
+  startRaffle: () => void;
+  stopRaffle: () => void;
+
+  fetchSubs: () => void;
+
   onStart: () => void;
 };
 
@@ -24,6 +43,22 @@ export default function ParticipantsModal({
   visible,
   participants,
   setParticipants,
+
+  role,
+
+  streamer,
+  setStreamer,
+
+  raffleWord,
+  setRaffleWord,
+
+  raffleRunning,
+
+  startRaffle,
+  stopRaffle,
+
+  fetchSubs,
+
   onStart,
 }: Props) {
   const [name, setName] = useState("");
@@ -51,6 +86,54 @@ export default function ParticipantsModal({
           <Text style={styles.title}>Participantes</Text>
 
           <View style={styles.addRow}>
+            {role === "mod" && (
+              <>
+                <Text>Canal</Text>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Streamer"
+                  value={streamer}
+                  onChangeText={setStreamer}
+                />
+              </>
+            )}
+
+            {role !== "viewer" && (
+              <>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Keyword"
+                  value={raffleWord}
+                  onChangeText={setRaffleWord}
+                />
+
+                {!raffleRunning && (
+                  <TouchableOpacity
+                    style={styles.secondaryButton}
+                    onPress={startRaffle}
+                  >
+                    <Text style={styles.text}>START RAFFLE</Text>
+                  </TouchableOpacity>
+                )}
+
+                {raffleRunning && (
+                  <TouchableOpacity
+                    style={styles.dangerButton}
+                    onPress={stopRaffle}
+                  >
+                    <Text style={styles.text}>STOP RAFFLE</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+
+            {role === "streamer" && (
+              <TouchableOpacity style={styles.button} onPress={fetchSubs}>
+                <Text style={styles.text}>GET SUBS</Text>
+              </TouchableOpacity>
+            )}
+
             <TextInput
               style={styles.input}
               value={name}
@@ -174,5 +257,33 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  button: {
+    backgroundColor: "#C5A582",
+    padding: 12,
+    marginTop: 10,
+    alignItems: "center",
+    borderRadius: 6,
+  },
+
+  text: {
+    color: "#fff",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  secondaryButton: {
+    backgroundColor: "#888",
+    padding: 12,
+    marginTop: 10,
+    alignItems: "center",
+    borderRadius: 6,
+  },
+
+  dangerButton: {
+    backgroundColor: "#C94B4B",
+    padding: 12,
+    marginTop: 10,
+    alignItems: "center",
+    borderRadius: 6,
   },
 });
