@@ -89,92 +89,78 @@ export default function ParticipantsModal({
           <TouchableOpacity style={styles.closeCorner} onPress={onClose}>
             <Text style={styles.closeText}>✕</Text>
           </TouchableOpacity>
-
+          
           <Text style={styles.title}>Participantes</Text>
 
-          {/* --- BLOQUE 1: ACCIONES AUTOMÁTICAS (Subs y Sorteo) --- */}
-          <View style={styles.topActions}>
-            {role === "streamer" && (
-              <TouchableOpacity
-                style={[styles.button, { marginTop: 0, marginBottom: 10 }]}
-                onPress={fetchSubs}
-              >
-                <Text style={styles.text}>GET SUBS FROM TWITCH</Text>
-              </TouchableOpacity>
-            )}
+          {/* 1. SECCIÓN CANAL (Solo si es Mod) */}
+          {role === "mod" && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionLabel}>Canal del Streamer:</Text>
+              <TextInput
+                style={styles.inputFull}
+                placeholder="Nombre del canal"
+                value={streamer}
+                onChangeText={setStreamer}
+              />
+            </View>
+          )}
 
-            {role !== "viewer" && (
-              <View style={styles.raffleBox}>
+          {/* 2. SECCIÓN SORTEO (Raffle) */}
+          {role !== "viewer" && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionLabel}>Palabra del Sorteo:</Text>
+              <View style={styles.row}>
                 <TextInput
-                  style={[styles.input, { marginRight: 10 }]}
-                  placeholder="Palabra sorteo (ej: !bingo)"
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="!sorteo"
                   value={raffleWord}
                   onChangeText={setRaffleWord}
                 />
                 {!raffleRunning ? (
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={startRaffle}
-                  >
+                  <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
                     <Text style={styles.text}>START RAFFLE</Text>
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity
-                    style={styles.dangerButton}
-                    onPress={stopRaffle}
-                  >
+                  <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
                     <Text style={styles.text}>STOP RAFFLE</Text>
                   </TouchableOpacity>
                 )}
               </View>
-            )}
-          </View>
+            </View>
+          )}
 
-          <View style={styles.separator} />
-
-          {/* --- BLOQUE 2: ENTRADA MANUAL --- */}
-          <Text style={styles.sectionLabel}>Añadir manualmente:</Text>
-          <View style={styles.addRow}>
-            {role === "mod" && (
+          {/* 3. SECCIÓN AÑADIR MANUALMENTE */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionLabel}>Añadir Manualmente:</Text>
+            <View style={styles.row}>
               <TextInput
-                style={[styles.input, { flex: 0.4 }]}
-                placeholder="Canal"
-                value={streamer}
-                onChangeText={setStreamer}
+                style={[styles.input, { flex: 1 }]}
+                value={name}
+                onChangeText={setName}
+                placeholder="Nombre del usuario..."
               />
-            )}
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Nombre del usuario..."
-            />
-            <TouchableOpacity style={styles.addBtn} onPress={add}>
-              <Text style={styles.btnText}>Añadir</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.addBtn} onPress={add}>
+                <Text style={styles.btnText}>Añadir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* --- BLOQUE 3: LISTADO --- */}
+          {/* LISTADO Y BOTONES FINALES */}
           <ScrollView style={styles.list}>
             {participants.map((p, i) => (
               <View key={i} style={styles.playerRow}>
                 <Text style={styles.playerName}>{p.name}</Text>
-                <TouchableOpacity
-                  onPress={() => remove(i)}
-                  style={styles.removeBtn}
-                >
+                <TouchableOpacity onPress={() => remove(i)} style={styles.removeBtn}>
                   <Text style={styles.btnText}>X</Text>
                 </TouchableOpacity>
               </View>
             ))}
           </ScrollView>
 
-          {/* --- BLOQUE 4: BOTONES DE ACCIÓN FINAL --- */}
           <View style={styles.bottomRow}>
             <TouchableOpacity style={styles.clearBtn} onPress={removeAll}>
               <Text style={styles.btnText}>Eliminar todos</Text>
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.startBtn} onPress={onStart}>
               <Text style={styles.btnText}>Empezar Partida</Text>
             </TouchableOpacity>
@@ -200,6 +186,10 @@ const styles = StyleSheet.create({
     maxHeight: "80%",
     padding: 20,
   },
+  sectionContainer: {
+    marginBottom: 15,
+    width: '100%',
+  },
 
   title: {
     fontSize: 22,
@@ -212,17 +202,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 10,
   },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
 
-  input: {
-    flex: 1,
+  inputFull: {
     borderWidth: 1,
+    borderColor: "#ddd",
     padding: 10,
-    marginRight: 10,
+    borderRadius: 4,
+    width: '100%',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 10,
+    borderRadius: 4,
   },
 
   addBtn: {
     backgroundColor: "#C5A582",
     padding: 12,
+    borderRadius: 6,
+    minWidth: 80,
+    alignItems: "center",
   },
 
   list: {
@@ -304,16 +309,16 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: "#888",
     padding: 12,
-    alignItems: "center",
     borderRadius: 6,
     minWidth: 120,
+    alignItems: "center",
   },
   dangerButton: {
     backgroundColor: "#C94B4B",
     padding: 12,
-    alignItems: "center",
     borderRadius: 6,
     minWidth: 120,
+    alignItems: "center",
   },
   closeCorner: {
     position: "absolute",
