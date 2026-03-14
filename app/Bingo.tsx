@@ -40,6 +40,9 @@ export default function Bingo() {
   const [winTitle, setWinTitle] = useState("");
   const [winPlayer, setWinPlayer] = useState("");
 
+  const [auto, setAuto] = useState(false);
+  const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   /*
 ========================
 JOIN ROOM
@@ -70,6 +73,10 @@ JOIN ROOM
       setWinPlayer(player);
       setWinVisible(true);
     });
+
+    if (autoRef.current) {
+      clearInterval(autoRef.current);
+    }
   }, []);
 
   /*
@@ -153,6 +160,23 @@ DRAW
     socket.emit("bingo:draw", { streamer: "default" });
   }
 
+  function toggleAuto() {
+    if (auto) {
+      setAuto(false);
+
+      if (autoRef.current) {
+        clearInterval(autoRef.current);
+        autoRef.current = null;
+      }
+    } else {
+      setAuto(true);
+
+      autoRef.current = setInterval(() => {
+        socket.emit("bingo:draw", { streamer: "default" });
+      }, 2000);
+    }
+  }
+
   /*
 ========================
 MARKED
@@ -192,9 +216,20 @@ MARKED
         <Text style={styles.bigText}>{current}</Text>
       </Animated.View>
 
-      <TouchableOpacity style={styles.drawButton} onPress={draw}>
-        <Text style={{ color: "#fff" }}>SACAR</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonsRow}>
+        <TouchableOpacity style={styles.drawButton} onPress={draw}>
+          <Text style={{ color: "#fff" }}>SACAR</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.autoButton, auto && styles.autoOn]}
+          onPress={toggleAuto}
+        >
+          <Text style={{ color: "#fff" }}>
+            AUTOMÁTICO {auto ? "ON" : "OFF"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView contentContainerStyle={styles.cardsGrid}>
         {cards.map((c, i) => (
@@ -281,13 +316,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  drawButton: {
-    backgroundColor: "#C5A582",
-    padding: 16,
-    alignItems: "center",
-    margin: 10,
-  },
-
   cardsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -332,5 +360,31 @@ const styles = StyleSheet.create({
 
   num: {
     fontWeight: "bold",
+  },
+
+  buttonsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  drawButton: {
+    backgroundColor: "#C5A582",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+  },
+
+  autoButton: {
+    backgroundColor: "#777",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+  },
+
+  autoOn: {
+    backgroundColor: "#4CAF50",
   },
 });
