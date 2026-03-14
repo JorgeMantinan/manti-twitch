@@ -53,7 +53,8 @@ export default function Bingo() {
   const [winPlayer, setWinPlayer] = useState("");
 
   const [auto, setAuto] = useState(false);
-  const activeStreamer = role === "mod" || role === "streamer" ? streamer : "default";
+  // const activeStreamer = role === "mod" || role === "streamer" ? streamer : "default";
+  const activeStreamer = streamer?.trim() || "default";
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getToken = async () => {
@@ -69,7 +70,8 @@ JOIN ROOM
 
   useEffect(() => {
     socket.emit("joinRoom", {
-      streamer: role === "mod" ? streamer : "default",
+      // streamer: role === "mod" ? streamer : "default",
+      streamer: activeStreamer,
     });
 
     socket.on("newParticipant", (data: any) => {
@@ -290,6 +292,7 @@ DRAW
 */
 
   function draw() {
+    console.log("DRAW STREAMER:", activeStreamer);
     socket.emit("bingo:draw", { streamer: activeStreamer });
   }
 
