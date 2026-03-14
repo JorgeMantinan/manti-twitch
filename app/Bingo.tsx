@@ -51,7 +51,7 @@ export default function Bingo() {
   const [winPlayer, setWinPlayer] = useState("");
 
   const [auto, setAuto] = useState(false);
-  
+
   const activeStreamer = streamer?.trim() || "default";
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -68,11 +68,16 @@ JOIN ROOM
 */
 
   useEffect(() => {
-
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
 
-    socketRef.current.emit("bingo:join", {
-      streamer: activeStreamer,
+    socketRef.current.on("connect", () => {
+      console.log("🟢 SOCKET CONNECTED");
+
+      socketRef.current?.emit("bingo:join", {
+        streamer: activeStreamer,
+      });
+
+      console.log("📡 Joined bingo room:", activeStreamer);
     });
 
     socketRef.current.on("newParticipant", (data: any) => {
@@ -95,6 +100,9 @@ JOIN ROOM
     });
 
     socketRef.current.on("bingo:number", (n: number) => {
+
+      console.log("🎱 RECEIVED NUMBER:", n);
+
       setCurrent(n);
       setDrawn((p) => [...p, n]);
       animateBall();
@@ -360,24 +368,24 @@ MARKED
       >
         <Text style={styles.bigText}>{current}</Text>
       </Animated.View>
-<View style={styles.controlCenter}>
-  <TouchableOpacity style={styles.newGame} onPress={newGame}>
-    <Text style={styles.btnNewGameText}>Nueva partida</Text>
-  </TouchableOpacity>
-      <View style={styles.buttonsRow}>
-        <TouchableOpacity style={styles.drawButton} onPress={draw}>
-          <Text style={{ color: "#fff" }}>SACAR BOLA</Text>
+      <View style={styles.controlCenter}>
+        <TouchableOpacity style={styles.newGame} onPress={newGame}>
+          <Text style={styles.btnNewGameText}>Nueva partida</Text>
         </TouchableOpacity>
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity style={styles.drawButton} onPress={draw}>
+            <Text style={{ color: "#fff" }}>SACAR BOLA</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.autoButton, auto && styles.autoOn]}
-          onPress={toggleAuto}
-        >
-          <Text style={{ color: "#fff" }}>
-            AUTOMÁTICO {auto ? "ON" : "OFF"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.autoButton, auto && styles.autoOn]}
+            onPress={toggleAuto}
+          >
+            <Text style={{ color: "#fff" }}>
+              AUTOMÁTICO {auto ? "ON" : "OFF"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.cardsGrid}>
@@ -427,7 +435,7 @@ const styles = StyleSheet.create({
   controlCenter: {
     alignItems: "center",
     marginBottom: 20,
-    gap: 10, 
+    gap: 10,
   },
 
   newGame: {
@@ -440,7 +448,7 @@ const styles = StyleSheet.create({
   btnNewGameText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 12,               // Fuente más pequeña
+    fontSize: 12, // Fuente más pequeña
   },
 
   drawnRow: {
