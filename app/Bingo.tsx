@@ -19,7 +19,7 @@ import { generateSpanishCard } from "../utils/bingoCard";
 import ParticipantsModal from "../components/BingoParticipantsModal";
 import BingoWinModal from "../components/BingoWinModal";
 
-const socket = io("https://manti-twitch-backend.onrender.com");
+const socket = useRef(io("https://manti-twitch-backend.onrender.com")).current;
 
 type Role = "viewer" | "mod" | "streamer";
 
@@ -53,6 +53,7 @@ export default function Bingo() {
   const [winPlayer, setWinPlayer] = useState("");
 
   const [auto, setAuto] = useState(false);
+  const activeStreamer = streamer || "default";
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getToken = async () => {
@@ -109,13 +110,11 @@ JOIN ROOM
     });
 
     return () => {
-      socket.disconnect();
-
       if (autoRef.current) {
         clearInterval(autoRef.current);
       }
     };
-  }, [streamer]);
+  }, []);
 
   /*
 ========================
@@ -266,7 +265,7 @@ START
     });
 
     socket.emit("bingo:start", {
-      streamer: "default",
+      streamer: activeStreamer,
       cards: backendCards,
     });
   }
@@ -291,7 +290,7 @@ DRAW
 */
 
   function draw() {
-    socket.emit("bingo:draw", { streamer: "default" });
+    socket.emit("bingo:draw", { streamer: activeStreamer });
   }
 
   function toggleAuto() {
@@ -306,7 +305,7 @@ DRAW
       setAuto(true);
 
       autoRef.current = setInterval(() => {
-        socket.emit("bingo:draw", { streamer: "default" });
+        socket.emit("bingo:draw", { streamer: activeStreamer });
       }, 2000);
     }
   }
