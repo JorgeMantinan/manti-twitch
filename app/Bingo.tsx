@@ -70,33 +70,17 @@ JOIN ROOM
   useEffect(() => {
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
 
-    // socketRef.current.on("connect", () => {
-    //   console.log("🟢 SOCKET CONNECTED:", socketRef.current?.id);
+    const room = role === "mod" ? streamer : "default";
 
-    //   socketRef.current?.emit("bingo:join", {
-    //     streamer: activeStreamer,
-    //   });
-
-    //   console.log("📡 Joined bingo room:", activeStreamer);
-    // });
-
-    socketRef.current.on("connect", () => {
-      console.log("🟢 SOCKET CONNECTED:", socketRef.current?.id);
-
-      const room = role === "mod" ? streamer : "default";
-
-      socketRef.current?.emit("joinRoom", {
-        streamer: room,
-      });
-
-      socketRef.current?.emit("bingo:join", {
-        streamer: activeStreamer,
-      });
-
-      console.log("📡 Joined rooms:", room, activeStreamer);
+    socketRef.current.emit("joinRoom", {
+      streamer: room,
     });
 
+    console.log("📡 Joined raffle room:", room);
+
     socketRef.current.on("newParticipant", (data: any) => {
+      console.log("NEW RAFFLE PARTICIPANT:", data);
+
       setParticipants((prev) => {
         const exists = prev.some(
           (p) =>
@@ -109,14 +93,12 @@ JOIN ROOM
           ...prev,
           {
             name: data.participant.username,
-            isSub: data.participant.isSub,
           },
         ];
       });
     });
 
     socketRef.current.on("bingo:number", (n: number) => {
-
       console.log("🎱 RECEIVED NUMBER:", n);
 
       setCurrent(n);
@@ -137,12 +119,9 @@ JOIN ROOM
     });
 
     return () => {
-      if (autoRef.current) {
-        clearInterval(autoRef.current);
-      }
       socketRef.current?.disconnect();
     };
-  }, []);
+  }, [streamer]);
 
   /*
 ========================

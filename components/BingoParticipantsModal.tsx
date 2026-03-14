@@ -89,41 +89,36 @@ export default function ParticipantsModal({
           <TouchableOpacity style={styles.closeCorner} onPress={onClose}>
             <Text style={styles.closeText}>✕</Text>
           </TouchableOpacity>
+
           <Text style={styles.title}>Participantes</Text>
 
-          <View style={styles.addRow}>
-            {role === "mod" && (
-              <>
-                <Text>Canal</Text>
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="Streamer"
-                  value={streamer}
-                  onChangeText={setStreamer}
-                />
-              </>
+          {/* --- BLOQUE 1: ACCIONES AUTOMÁTICAS (Subs y Sorteo) --- */}
+          <View style={styles.topActions}>
+            {role === "streamer" && (
+              <TouchableOpacity
+                style={[styles.button, { marginTop: 0, marginBottom: 10 }]}
+                onPress={fetchSubs}
+              >
+                <Text style={styles.text}>GET SUBS FROM TWITCH</Text>
+              </TouchableOpacity>
             )}
 
             {role !== "viewer" && (
-              <>
+              <View style={styles.raffleBox}>
                 <TextInput
-                  style={styles.input}
-                  placeholder="Keyword"
+                  style={[styles.input, { marginRight: 10 }]}
+                  placeholder="Palabra sorteo (ej: !bingo)"
                   value={raffleWord}
                   onChangeText={setRaffleWord}
                 />
-
-                {!raffleRunning && (
+                {!raffleRunning ? (
                   <TouchableOpacity
                     style={styles.secondaryButton}
                     onPress={startRaffle}
                   >
                     <Text style={styles.text}>START RAFFLE</Text>
                   </TouchableOpacity>
-                )}
-
-                {raffleRunning && (
+                ) : (
                   <TouchableOpacity
                     style={styles.dangerButton}
                     onPress={stopRaffle}
@@ -131,32 +126,39 @@ export default function ParticipantsModal({
                     <Text style={styles.text}>STOP RAFFLE</Text>
                   </TouchableOpacity>
                 )}
-              </>
+              </View>
             )}
+          </View>
 
-            {role === "streamer" && (
-              <TouchableOpacity style={styles.button} onPress={fetchSubs}>
-                <Text style={styles.text}>GET SUBS</Text>
-              </TouchableOpacity>
+          <View style={styles.separator} />
+
+          {/* --- BLOQUE 2: ENTRADA MANUAL --- */}
+          <Text style={styles.sectionLabel}>Añadir manualmente:</Text>
+          <View style={styles.addRow}>
+            {role === "mod" && (
+              <TextInput
+                style={[styles.input, { flex: 0.4 }]}
+                placeholder="Canal"
+                value={streamer}
+                onChangeText={setStreamer}
+              />
             )}
-
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="username"
+              placeholder="Nombre del usuario..."
             />
-
             <TouchableOpacity style={styles.addBtn} onPress={add}>
               <Text style={styles.btnText}>Añadir</Text>
             </TouchableOpacity>
           </View>
 
+          {/* --- BLOQUE 3: LISTADO --- */}
           <ScrollView style={styles.list}>
             {participants.map((p, i) => (
               <View key={i} style={styles.playerRow}>
                 <Text style={styles.playerName}>{p.name}</Text>
-
                 <TouchableOpacity
                   onPress={() => remove(i)}
                   style={styles.removeBtn}
@@ -167,13 +169,14 @@ export default function ParticipantsModal({
             ))}
           </ScrollView>
 
+          {/* --- BLOQUE 4: BOTONES DE ACCIÓN FINAL --- */}
           <View style={styles.bottomRow}>
             <TouchableOpacity style={styles.clearBtn} onPress={removeAll}>
               <Text style={styles.btnText}>Eliminar todos</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.startBtn} onPress={onStart}>
-              <Text style={styles.btnText}>Empezar</Text>
+              <Text style={styles.btnText}>Empezar Partida</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -277,20 +280,40 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
+  separator: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: 15,
+  },
+  topActions: {
+    marginBottom: 15,
+  },
+  raffleBox: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  sectionLabel: {
+    fontSize: 12,
+    color: "#777",
+    marginBottom: 5,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+  },
+
   secondaryButton: {
     backgroundColor: "#888",
     padding: 12,
-    marginTop: 10,
     alignItems: "center",
     borderRadius: 6,
+    minWidth: 120,
   },
-
   dangerButton: {
     backgroundColor: "#C94B4B",
     padding: 12,
-    marginTop: 10,
     alignItems: "center",
     borderRadius: 6,
+    minWidth: 120,
   },
   closeCorner: {
     position: "absolute",
