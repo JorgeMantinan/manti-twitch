@@ -70,14 +70,30 @@ JOIN ROOM
   useEffect(() => {
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
 
+    // socketRef.current.on("connect", () => {
+    //   console.log("🟢 SOCKET CONNECTED:", socketRef.current?.id);
+
+    //   socketRef.current?.emit("bingo:join", {
+    //     streamer: activeStreamer,
+    //   });
+
+    //   console.log("📡 Joined bingo room:", activeStreamer);
+    // });
+
     socketRef.current.on("connect", () => {
       console.log("🟢 SOCKET CONNECTED:", socketRef.current?.id);
+
+      const room = role === "mod" ? streamer : "default";
+
+      socketRef.current?.emit("joinRoom", {
+        streamer: room,
+      });
 
       socketRef.current?.emit("bingo:join", {
         streamer: activeStreamer,
       });
 
-      console.log("📡 Joined bingo room:", activeStreamer);
+      console.log("📡 Joined rooms:", room, activeStreamer);
     });
 
     socketRef.current.on("newParticipant", (data: any) => {
