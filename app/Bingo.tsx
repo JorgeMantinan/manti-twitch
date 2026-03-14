@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
@@ -18,8 +18,6 @@ import { useLocalSearchParams } from "expo-router";
 import { generateSpanishCard } from "../utils/bingoCard";
 import ParticipantsModal from "../components/BingoParticipantsModal";
 import BingoWinModal from "../components/BingoWinModal";
-
-const socket = useRef(io("https://manti-twitch-backend.onrender.com")).current;
 
 type Role = "viewer" | "mod" | "streamer";
 
@@ -53,9 +51,10 @@ export default function Bingo() {
   const [winPlayer, setWinPlayer] = useState("");
 
   const [auto, setAuto] = useState(false);
-  // const activeStreamer = role === "mod" || role === "streamer" ? streamer : "default";
+  
   const activeStreamer = streamer?.trim() || "default";
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   const getToken = async () => {
     if (Platform.OS === "web") return localStorage.getItem("userToken");
@@ -69,12 +68,14 @@ JOIN ROOM
 */
 
   useEffect(() => {
-    socket.emit("joinRoom", {
-      // streamer: role === "mod" ? streamer : "default",
+
+    socketRef.current = io("https://manti-twitch-backend.onrender.com");
+
+    socketRef.current.emit("bingo:join", {
       streamer: activeStreamer,
     });
 
-    socket.on("newParticipant", (data: any) => {
+    socketRef.current.on("newParticipant", (data: any) => {
       setParticipants((prev) => {
         const exists = prev.some(
           (p) =>
@@ -93,19 +94,19 @@ JOIN ROOM
       });
     });
 
-    socket.on("bingo:number", (n: number) => {
+    socketRef.current.on("bingo:number", (n: number) => {
       setCurrent(n);
       setDrawn((p) => [...p, n]);
       animateBall();
     });
 
-    socket.on("bingo:line", (player) => {
+    socketRef.current.on("bingo:line", (player) => {
       setWinTitle("LINEA");
       setWinPlayer(player);
       setWinVisible(true);
     });
 
-    socket.on("bingo:bingo", (player) => {
+    socketRef.current.on("bingo:bingo", (player) => {
       setWinTitle("BINGO");
       setWinPlayer(player);
       setWinVisible(true);
@@ -115,6 +116,7 @@ JOIN ROOM
       if (autoRef.current) {
         clearInterval(autoRef.current);
       }
+      socketRef.current?.disconnect();
     };
   }, []);
 
@@ -266,7 +268,7 @@ START
       backendCards[c.player] = c.card;
     });
 
-    socket.emit("bingo:start", {
+    socketRef.current?.emit("bingo:start", {
       streamer: activeStreamer,
       cards: backendCards,
     });
@@ -293,7 +295,7 @@ DRAW
 
   function draw() {
     console.log("DRAW STREAMER:", activeStreamer);
-    socket.emit("bingo:draw", { streamer: activeStreamer });
+    socketRef.current?.emit("bingo:draw", { streamer: activeStreamer });
   }
 
   function toggleAuto() {
@@ -308,7 +310,7 @@ DRAW
       setAuto(true);
 
       autoRef.current = setInterval(() => {
-        socket.emit("bingo:draw", { streamer: activeStreamer });
+        socketRef.current?.emit("bingo:draw", { streamer: activeStreamer });
       }, 2000);
     }
   }
