@@ -12,6 +12,7 @@ import { io } from "socket.io-client";
 
 import { generateSpanishCard } from "../utils/bingoCard";
 import ParticipantsModal from "../components/BingoParticipantsModal";
+import BingoWinModal from "../components/BingoWinModal";
 
 const socket = io("https://manti-twitch-backend.onrender.com");
 
@@ -35,6 +36,10 @@ export default function Bingo() {
 
   const ballScale = useRef(new Animated.Value(0)).current;
 
+  const [winVisible, setWinVisible] = useState(false);
+  const [winTitle, setWinTitle] = useState("");
+  const [winPlayer, setWinPlayer] = useState("");
+
   /*
 ========================
 JOIN ROOM
@@ -51,15 +56,19 @@ JOIN ROOM
 
       animateBall();
 
-    //   speakNumber(n);
+      //   speakNumber(n);
     });
 
     socket.on("bingo:line", (player) => {
-      alert(`LINEA ${player}`);
+      setWinTitle("LINEA");
+      setWinPlayer(player);
+      setWinVisible(true);
     });
 
     socket.on("bingo:bingo", (player) => {
-      alert(`BINGO ${player}`);
+      setWinTitle("BINGO");
+      setWinPlayer(player);
+      setWinVisible(true);
     });
   }, []);
 
@@ -123,6 +132,19 @@ START
 
   /*
 ========================
+NEW GAME
+========================
+*/
+  function newGame() {
+    setCards([]);
+    setDrawn([]);
+    setCurrent(null);
+
+    setModalVisible(true);
+  }
+
+  /*
+========================
 DRAW
 ========================
 */
@@ -143,6 +165,9 @@ MARKED
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.newGame} onPress={newGame}>
+        <Text style={{ color: "#fff" }}>Nueva partida</Text>
+      </TouchableOpacity>
       <ParticipantsModal
         visible={modalVisible}
         participants={participants}
@@ -156,7 +181,7 @@ MARKED
       <ScrollView horizontal style={styles.drawnRow}>
         {drawn.map((n, i) => (
           <View key={i} style={styles.smallBall}>
-            <Text style={{ color: "#fff" }}>{n}</Text>
+            <Text>{n}</Text>
           </View>
         ))}
       </ScrollView>
@@ -199,6 +224,12 @@ MARKED
           </View>
         ))}
       </ScrollView>
+      <BingoWinModal
+        visible={winVisible}
+        title={winTitle}
+        player={winPlayer}
+        onClose={() => setWinVisible(false)}
+      />
     </View>
   );
 }
@@ -208,6 +239,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ECE7E1",
     paddingTop: 40,
+  },
+
+  newGame: {
+    backgroundColor: "#444",
+    padding: 10,
+    alignItems: "center",
   },
 
   drawnRow: {
