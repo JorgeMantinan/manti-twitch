@@ -37,6 +37,8 @@ type Props = {
   fetchSubs: () => void;
 
   onStart: () => void;
+
+  onClose: () => void;
 };
 
 export default function ParticipantsModal({
@@ -60,6 +62,7 @@ export default function ParticipantsModal({
   fetchSubs,
 
   onStart,
+  onClose,
 }: Props) {
   const [name, setName] = useState("");
 
@@ -83,6 +86,9 @@ export default function ParticipantsModal({
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.container}>
+          <TouchableOpacity style={styles.closeCorner} onPress={onClose}>
+            <Text style={styles.closeText}>✕</Text>
+          </TouchableOpacity>
           <Text style={styles.title}>Participantes</Text>
 
           <View style={styles.addRow}>
@@ -285,5 +291,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
     alignItems: "center",
     borderRadius: 6,
+  },
+  closeCorner: {
+    position: "absolute",
+    right: 15,
+    top: 15,
+    zIndex: 10,
+    padding: 5,
+  },
+  closeText: {
+    fontSize: 20,
+    color: "#777",
+    fontWeight: "bold",
   },
 });

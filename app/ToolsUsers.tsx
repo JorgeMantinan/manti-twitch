@@ -27,6 +27,12 @@ const USER_TOOLS = [
     route: '/Ships',
     icon: 'ferris-wheel' 
   },
+  { 
+    id: '3', 
+    title: 'BINGO', 
+    route: '/Bingo',
+    icon: 'harmony-o-s' 
+  },
 ];
 
 export default function ToolsUsers() {

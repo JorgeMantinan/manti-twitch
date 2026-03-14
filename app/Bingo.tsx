@@ -323,9 +323,6 @@ MARKED
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.newGame} onPress={newGame}>
-        <Text style={{ color: "#fff" }}>Nueva partida</Text>
-      </TouchableOpacity>
       <ParticipantsModal
         visible={modalVisible}
         participants={participants}
@@ -343,6 +340,7 @@ MARKED
           setModalVisible(false);
           startGame();
         }}
+        onClose={() => setModalVisible(false)}
       />
 
       <ScrollView horizontal style={styles.drawnRow}>
@@ -358,10 +356,13 @@ MARKED
       >
         <Text style={styles.bigText}>{current}</Text>
       </Animated.View>
-
+<View style={styles.controlCenter}>
+  <TouchableOpacity style={styles.newGame} onPress={newGame}>
+    <Text style={styles.btnNewGameText}>Nueva partida</Text>
+  </TouchableOpacity>
       <View style={styles.buttonsRow}>
         <TouchableOpacity style={styles.drawButton} onPress={draw}>
-          <Text style={{ color: "#fff" }}>SACAR</Text>
+          <Text style={{ color: "#fff" }}>SACAR BOLA</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -372,6 +373,7 @@ MARKED
             AUTOMÁTICO {auto ? "ON" : "OFF"}
           </Text>
         </TouchableOpacity>
+      </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.cardsGrid}>
@@ -418,11 +420,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#ECE7E1",
     paddingTop: 40,
   },
+  controlCenter: {
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 10, 
+  },
 
   newGame: {
-    backgroundColor: "#444",
-    padding: 10,
-    alignItems: "center",
+    backgroundColor: "#C5A582",
+    paddingVertical: 6,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 2,
+  },
+  btnNewGameText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 12,               // Fuente más pequeña
   },
 
   drawnRow: {
@@ -510,7 +524,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
-    marginBottom: 10,
   },
 
   drawButton: {
