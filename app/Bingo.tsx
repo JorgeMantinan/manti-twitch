@@ -71,7 +71,7 @@ JOIN ROOM
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
 
     socketRef.current.on("connect", () => {
-      console.log("🟢 SOCKET CONNECTED");
+      console.log("🟢 SOCKET CONNECTED:", socketRef.current?.id);
 
       socketRef.current?.emit("bingo:join", {
         streamer: activeStreamer,
