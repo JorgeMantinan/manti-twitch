@@ -53,7 +53,7 @@ export default function Bingo() {
   const [winPlayer, setWinPlayer] = useState("");
 
   const [auto, setAuto] = useState(false);
-  const activeStreamer = streamer || "default";
+  const activeStreamer = role === "mod" || role === "streamer" ? streamer : "default";
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getToken = async () => {
