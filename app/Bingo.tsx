@@ -77,6 +77,10 @@ JOIN ROOM
       streamer: room,
     });
 
+    socketRef.current.emit("bingo:join", {
+      streamer: room,
+    });
+
     console.log("📡 Joined raffle room:", room);
 
     socketRef.current.on("newParticipant", (data: any) => {
