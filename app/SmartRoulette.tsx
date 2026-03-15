@@ -64,7 +64,11 @@ export default function SmartRoulette() {
   const [keyword, setKeyword] = useState("!sorteo");
   const [streamer, setStreamer] = useState("");
   const role: Role = (params.role as Role) || "viewer";
-  // const [role, setRole] = useState<Role>("viewer");
+
+  const [visualSlices, setVisualSlices] = useState<Participant[]>([]);
+  useEffect(() => {
+    setVisualSlices(buildVisualSlices());
+  }, [participants]);
 
   const spinAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -249,6 +253,11 @@ ANIMATION
 
     const winnerIndex = visual.findIndex((p) => p.username === winnerName);
 
+    if (winnerIndex === -1) {
+      console.warn("Winner not in visual slices");
+      return;
+    }
+
     const centerOfSlice = winnerIndex * slice + slice / 2;
 
     const targetAngle = 360 - centerOfSlice;
@@ -359,9 +368,7 @@ PICK WINNER
       };
     }
 
-    const visual = buildVisualSlices();
-
-    animateSpin(winnerUser.username, visual);
+    animateSpin(winnerUser.username, visualSlices);
   };
 
   /*
@@ -369,7 +376,7 @@ RENDER WHEEL
 */
 
   const renderWheel = () => {
-    const visual = buildVisualSlices();
+    const visual = visualSlices;
 
     const radius = RADIUS;
     const center = CENTER;
