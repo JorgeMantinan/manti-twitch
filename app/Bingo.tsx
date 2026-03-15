@@ -108,14 +108,16 @@ JOIN ROOM
     });
 
     socketRef.current.on("bingo:line", (player) => {
+      const realPlayer = player.split("_")[0];
       setWinTitle("LINEA");
-      setWinPlayer(player);
+      setWinPlayer(realPlayer);
       setWinVisible(true);
     });
 
     socketRef.current.on("bingo:bingo", (player) => {
+      const realPlayer = player.split("_")[0];
       setWinTitle("BINGO");
-      setWinPlayer(player);
+      setWinPlayer(realPlayer);
       setWinVisible(true);
     });
 
@@ -275,14 +277,10 @@ START
 
     setCards(cardsGenerated);
 
-    const backendCards: Record<string, BingoCard[]> = {};
+    const backendCards: Record<string, BingoCard> = {};
 
-    cardsGenerated.forEach((c) => {
-      if (!backendCards[c.player]) {
-        backendCards[c.player] = [];
-      }
-
-      backendCards[c.player].push(c.card);
+    cardsGenerated.forEach((c, i) => {
+      backendCards[`${c.player}_${i}`] = c.card;
     });
 
     socketRef.current?.emit("bingo:start", {
