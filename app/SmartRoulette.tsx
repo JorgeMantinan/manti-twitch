@@ -9,6 +9,7 @@ import {
   ScrollView,
   Animated,
   Easing,
+  Dimensions,
 } from "react-native";
 
 import Svg, { G, Path, Text as SvgText } from "react-native-svg";
@@ -33,6 +34,12 @@ interface SocketData {
 
 type Role = "viewer" | "mod" | "streamer";
 
+// Roulette width
+const { width } = Dimensions.get("window");
+const WHEEL_SIZE = Math.min(width * 0.45, 520);
+const CENTER = WHEEL_SIZE / 2;
+const RADIUS = WHEEL_SIZE / 2 - 20;
+
 const MAX_SLICES = 120;
 
 export default function SmartRoulette() {
@@ -56,10 +63,13 @@ export default function SmartRoulette() {
   const [newUser, setNewUser] = useState("");
   const [keyword, setKeyword] = useState("!sorteo");
   const [streamer, setStreamer] = useState("");
-  const role:Role = (params.role as Role) || "viewer";
+  const role: Role = (params.role as Role) || "viewer";
   // const [role, setRole] = useState<Role>("viewer");
 
   const spinAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    spinAnim.setValue(0);
+  }, []);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -79,62 +89,9 @@ TOKEN
   };
 
   /*
-JWT PARSER
-*/
-
-  // const parseJWT = (token: string) => {
-  //   try {
-  //     const payload = token.split(".")[1];
-  //     return JSON.parse(atob(payload));
-  //   } catch {
-  //     return null;
-  //   }
-  // };
-
-  /*
-ROLE SYSTEM
-*/
-
-  // const determineRole = (decoded: any): Role => {
-  //   if (!decoded) return "viewer";
-
-  //   let scopes: string[] = [];
-
-  //   if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
-  //   else if (typeof decoded.scopes === "string")
-  //     scopes = decoded.scopes.split(" ");
-  //   else if (typeof decoded.scope === "string")
-  //     scopes = decoded.scope.split(" ");
-
-  //   if (scopes.includes("channel:read:subscriptions")) return "streamer";
-
-  //   if (scopes.includes("moderator:read:followers")) return "mod";
-
-  //   return "viewer";
-  // };
-
-  // const checkAuth = async () => {
-  //   const token = await getToken();
-
-  //   if (!token) {
-  //     setRole("viewer");
-  //     return;
-  //   }
-
-  //   const decoded = parseJWT(token);
-
-  //   setRole(determineRole(decoded));
-  // };
-
-  // useEffect(() => {
-  //   checkAuth();
-  // }, []);
-
-  /*
     SOCKET REAL-TIME LISTENER
   */
   useEffect(() => {
-
     if (socketRef.current) return;
 
     const socket = io("https://manti-twitch-backend.onrender.com");
@@ -145,9 +102,8 @@ ROLE SYSTEM
       console.log("🟢 SOCKET RULETA conectado");
 
       socket.emit("joinRoom", {
-        streamer: role === "mod" ? streamer : "default"
+        streamer: role === "mod" ? streamer : "default",
       });
-
     });
 
     socket.on("newParticipant", (data: SocketData) => {
@@ -157,7 +113,7 @@ ROLE SYSTEM
         const exists = prev.some(
           (p) =>
             p.username.toLowerCase() ===
-            data.participant.username.toLowerCase()
+            data.participant.username.toLowerCase(),
         );
 
         if (exists) return prev;
@@ -178,7 +134,6 @@ ROLE SYSTEM
       socket.disconnect();
       socketRef.current = null;
     };
-
   }, [streamer]);
 
   /*
@@ -186,17 +141,23 @@ WEIGHT SYSTEM
 */
 
   const buildWeightedParticipants = () => {
-    const list: Participant[] = [];
+    const expanded: Participant[] = [];
 
     participants.forEach((p) => {
       const copies = Math.max(1, Math.floor(p.weight));
 
       for (let i = 0; i < copies; i++) {
-        list.push(p);
+        expanded.push({ ...p });
       }
     });
 
-    return list;
+    // shuffle para alternar
+    for (let i = expanded.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [expanded[i], expanded[j]] = [expanded[j], expanded[i]];
+    }
+
+    return expanded;
   };
 
   /*
@@ -272,6 +233,9 @@ PARTICIPANTS
 
   const removeParticipant = (name: string) => {
     setParticipants((p) => p.filter((u) => u.username !== name));
+  };
+  const clearParticipants = () => {
+    setParticipants([]);
   };
 
   /*
@@ -350,12 +314,11 @@ BACKEND
       weight: p.points,
     }));
 
-
     setParticipants((prev) => {
       const existing = new Set(prev.map((p) => p.username.toLowerCase()));
 
       const newOnes = parsed.filter(
-        (p) => !existing.has(p.username.toLowerCase())
+        (p) => !existing.has(p.username.toLowerCase()),
       );
 
       return [...prev, ...newOnes];
@@ -408,8 +371,8 @@ RENDER WHEEL
   const renderWheel = () => {
     const visual = buildVisualSlices();
 
-    const radius = 150;
-    const center = 180;
+    const radius = RADIUS;
+    const center = CENTER;
     const slice = 360 / visual.length;
 
     return visual.map((p, i) => {
@@ -431,8 +394,8 @@ Z
 
       const textAngle = start + slice / 2;
 
-      const tx = center + radius * 0.65 * Math.cos((Math.PI * textAngle) / 180);
-      const ty = center + radius * 0.65 * Math.sin((Math.PI * textAngle) / 180);
+      const tx = center + radius * 0.55 * Math.cos((Math.PI * textAngle) / 180);
+      const ty = center + radius * 0.55 * Math.sin((Math.PI * textAngle) / 180);
 
       return (
         <G key={i}>
@@ -442,7 +405,9 @@ Z
             <SvgText
               x={tx}
               y={ty}
-              fontSize={visual.length > 40 ? "10" : "18"}
+              fontSize={
+                visual.length > 60 ? "10" : visual.length > 25 ? "14" : "18"
+              }
               fill="white"
               textAnchor="middle"
               alignmentBaseline="middle"
@@ -494,7 +459,7 @@ UI
               ],
             }}
           >
-            <Svg width={360} height={360}>
+            <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
               {renderWheel()}
             </Svg>
           </Animated.View>
@@ -515,7 +480,7 @@ UI
         )}
 
         <TouchableOpacity style={styles.button} onPress={pickWinner}>
-          <Text style={styles.buttonText}>SPIN</Text>
+          <Text style={styles.buttonText}>GIRAR RULETA</Text>
         </TouchableOpacity>
 
         {winner && <Text style={styles.winner}>🏆 {winner}</Text>}
@@ -534,10 +499,19 @@ UI
         />
 
         <TouchableOpacity style={styles.button} onPress={addParticipant}>
-          <Text style={styles.buttonText}>Add</Text>
+          <Text style={styles.buttonText}>Añadir</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: "#999" }]}
+          onPress={clearParticipants}
+        >
+          <Text style={styles.buttonText}>Eliminar todo</Text>
         </TouchableOpacity>
 
-        <ScrollView style={styles.list}>
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={styles.participantGrid}
+        >
           {participants.map((p, i) => (
             <View key={p.username + i} style={styles.row}>
               <Text>{p.username}</Text>
@@ -548,7 +522,6 @@ UI
             </View>
           ))}
         </ScrollView>
-        
       </View>
     </View>
   );
@@ -558,18 +531,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#FAF7F2",
+    backgroundColor: "#ECE7E1",
+    padding: 30,
     justifyContent: "center",
     alignItems: "center",
   },
 
   leftSide: {
+    flex: 1.2,
     alignItems: "center",
-    marginRight: 40,
   },
 
   rightSide: {
-    width: 260,
+    flex: 1,
+    marginLeft: 40,
   },
 
   title: {
@@ -579,15 +554,17 @@ const styles = StyleSheet.create({
   },
 
   wheelContainer: {
-    width: 360,
-    height: 360,
+    width: WHEEL_SIZE,
+    height: WHEEL_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
 
   pointer: {
     position: "absolute",
-    right: -12,
+    right: -14,
+    top: "50%",
+    marginTop: -15,
     width: 0,
     height: 0,
     borderTopWidth: 15,
@@ -602,7 +579,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: "#C5A582",
     padding: 12,
-    borderRadius: 25,
+    borderRadius: 20,
     alignItems: "center",
   },
 
@@ -632,12 +609,23 @@ const styles = StyleSheet.create({
   },
 
   list: {
-    maxHeight: 300,
+    flex: 1,
   },
 
   row: {
+    width: "48%",
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 6,
+    padding: 8,
+    backgroundColor: "#FFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DDD",
+  },
+  participantGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 20,
   },
 });

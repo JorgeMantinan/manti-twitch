@@ -41,7 +41,7 @@ interface SocketData {
 type Role = "viewer" | "mod" | "streamer";
 
 export default function Ships() {
-  const socketRef = useRef<any>(null);  
+  const socketRef = useRef<any>(null);
   const params = useLocalSearchParams();
 
   const [gameState, setGameState] = useState<"setup" | "playing">("setup");
@@ -58,7 +58,7 @@ export default function Ships() {
   const shipsRef = useRef<any[]>([]);
   const bulletsRef = useRef<any[]>([]);
 
-  const role:Role = (params.role as Role) || "viewer";
+  const role: Role = (params.role as Role) || "viewer";
   // const [role, setRole] = useState<Role>("viewer");
 
   const [streamer, setStreamer] = useState("");
@@ -130,7 +130,8 @@ export default function Ships() {
       try {
         let savedData = null;
 
-        if (Platform.OS === "web") savedData = localStorage.getItem(STORAGE_KEY);
+        if (Platform.OS === "web")
+          savedData = localStorage.getItem(STORAGE_KEY);
         else savedData = await AsyncStorage.getItem(STORAGE_KEY);
 
         if (savedData) {
@@ -164,16 +165,15 @@ export default function Ships() {
   useEffect(() => {
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
     socketRef.current.emit("joinRoom", {
-      streamer: role === "mod" ? streamer : "default"
+      streamer: role === "mod" ? streamer : "default",
     });
-
-    
 
     // Añadimos el tipo aquí (data: SocketData)
     socketRef.current.on("newParticipant", (data: SocketData) => {
       setParticipants((prev) => {
         const exists = prev.some(
-          (p) => p.name.toLowerCase() === data.participant.username.toLowerCase()
+          (p) =>
+            p.name.toLowerCase() === data.participant.username.toLowerCase(),
         );
         if (exists) return prev;
 
@@ -199,9 +199,9 @@ export default function Ships() {
   const addParticipant = () => {
     if (!inputName.trim()) return;
 
-    setParticipants(prev => {
+    setParticipants((prev) => {
       const exists = prev.some(
-        p => p.name.toLowerCase() === inputName.trim().toLowerCase()
+        (p) => p.name.toLowerCase() === inputName.trim().toLowerCase(),
       );
 
       if (exists) return prev;
@@ -210,8 +210,8 @@ export default function Ships() {
         ...prev,
         {
           name: inputName.trim(),
-          isSub: isSubInput
-        }
+          isSub: isSubInput,
+        },
       ];
     });
 
@@ -294,7 +294,7 @@ export default function Ships() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     const data = await res.json();
@@ -308,7 +308,7 @@ export default function Ships() {
       const existing = new Set(prev.map((p) => p.name.toLowerCase()));
 
       const newOnes = parsed.filter(
-        (p: any) => !existing.has(p.name.toLowerCase())
+        (p: any) => !existing.has(p.name.toLowerCase()),
       );
 
       return [...prev, ...newOnes];
@@ -349,6 +349,7 @@ export default function Ships() {
 
       kills: 0,
       color: p.isSub ? "#FFD700" : "#FFF",
+      fontWeight: "bold",
     }));
 
     setShips(initialShips);
@@ -419,8 +420,7 @@ export default function Ships() {
           const targets = aliveShips.filter((e) => e.id !== s.id);
 
           if (targets.length > 0) {
-            const target =
-              targets[Math.floor(Math.random() * targets.length)];
+            const target = targets[Math.floor(Math.random() * targets.length)];
 
             const angle = Math.atan2(target.y - s.y, target.x - s.x);
 
@@ -487,13 +487,13 @@ export default function Ships() {
 
             {!raffleRunning && (
               <TouchableOpacity style={styles.startBtn} onPress={startRaffle}>
-                <Text style={styles.startBtnText}>START RAFFLE</Text>
+                <Text style={styles.startBtnText}>Obtener gente del chat</Text>
               </TouchableOpacity>
             )}
 
             {raffleRunning && (
               <TouchableOpacity style={styles.startBtn} onPress={stopRaffle}>
-                <Text style={styles.startBtnText}>STOP RAFFLE</Text>
+                <Text style={styles.startBtnText}>Dejar de obtener</Text>
               </TouchableOpacity>
             )}
           </>
@@ -501,7 +501,7 @@ export default function Ships() {
 
         {role === "streamer" && (
           <TouchableOpacity style={styles.startBtn} onPress={fetchSubs}>
-            <Text style={styles.startBtnText}>GET SUBS</Text>
+            <Text style={styles.startBtnText}>OBTENER SUBS</Text>
           </TouchableOpacity>
         )}
 
@@ -530,10 +530,20 @@ export default function Ships() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.participantList}>
+        <ScrollView
+          style={styles.participantList}
+          contentContainerStyle={styles.grid}
+        >
           {participants.map((p, i) => (
             <View key={i} style={styles.participantItem}>
-              <Text style={{ color: p.isSub ? "#FFD700" : "#FFF" }}>
+              <Text
+                style={{
+                  color: p.isSub ? "#FFD700" : "#222",
+                  fontWeight: "bold",
+                  fontSize: 12,
+                  textAlign: "center",
+                }}
+              >
                 {p.isSub ? "👑 " : "🚤 "} {p.name}
               </Text>
 
@@ -663,7 +673,7 @@ export default function Ships() {
 const styles = StyleSheet.create({
   setupContainer: {
     flex: 1,
-    backgroundColor: "#121212",
+    backgroundColor: "#ECE7E1",
     padding: 20,
     paddingTop: 60,
   },
@@ -679,6 +689,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     color: "#000",
+    borderWidth: 1,
+    borderColor: "#DDD",
     marginBottom: 10,
   },
   inputBox: { flexDirection: "row", gap: 10, marginBottom: 20 },
@@ -698,15 +710,17 @@ const styles = StyleSheet.create({
   addBtnText: { color: "#FFF", fontSize: 24 },
   participantList: { flex: 1 },
   participantItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 15,
-    backgroundColor: "#1E1E1E",
+    width: "16%",
+    padding: 8,
+    backgroundColor: "#FFF",
     borderRadius: 10,
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#DDD",
+    alignItems: "center",
+    justifyContent: "center",
   },
   startBtn: {
-    backgroundColor: "#4caf50",
+    backgroundColor: "#C5A582",
     padding: 18,
     borderRadius: 15,
     alignItems: "center",
@@ -715,6 +729,11 @@ const styles = StyleSheet.create({
   startBtnText: { color: "#FFF", fontWeight: "bold", fontSize: 16 },
   clearBtn: { padding: 15, alignItems: "center" },
   clearBtnText: { color: "#AAA" },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   ocean: { flex: 1 },
   scoreboard: {
     position: "absolute",
@@ -737,10 +756,11 @@ const styles = StyleSheet.create({
   scoreText: { fontSize: 13, fontWeight: "bold", marginBottom: 2 },
   shipContainer: { position: "absolute", alignItems: "center" },
   shipName: {
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "900",
     textShadowColor: "#000",
-    textShadowRadius: 2,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   hpBG: { height: 4, width: 35, backgroundColor: "#333" },
   hpFill: { height: "100%" },

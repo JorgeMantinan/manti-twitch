@@ -259,45 +259,37 @@ START
 */
 
   function startGame() {
+    const cardsGenerated: PlayerCard[] = [];
 
-  const cardsGenerated: PlayerCard[] = [];
+    participants.forEach((p) => {
+      const amount = p.isSub ? 2 : 1;
 
-  participants.forEach((p) => {
+      for (let i = 0; i < amount; i++) {
+        cardsGenerated.push({
+          player: p.name,
+          card: generateSpanishCard(),
+          isSub: p.isSub,
+        });
+      }
+    });
 
-    const amount = p.isSub ? 2 : 1;
+    setCards(cardsGenerated);
 
-    for (let i = 0; i < amount; i++) {
+    const backendCards: Record<string, BingoCard[]> = {};
 
-      cardsGenerated.push({
-        player: p.name,
-        card: generateSpanishCard(),
-        isSub: p.isSub
-      });
+    cardsGenerated.forEach((c) => {
+      if (!backendCards[c.player]) {
+        backendCards[c.player] = [];
+      }
 
-    }
+      backendCards[c.player].push(c.card);
+    });
 
-  });
-
-  setCards(cardsGenerated);
-
-  const backendCards: Record<string, BingoCard[]> = {};
-
-  cardsGenerated.forEach((c) => {
-
-    if (!backendCards[c.player]) {
-      backendCards[c.player] = [];
-    }
-
-    backendCards[c.player].push(c.card);
-
-  });
-
-  socketRef.current?.emit("bingo:start", {
-    streamer: activeStreamer,
-    cards: backendCards,
-  });
-
-}
+    socketRef.current?.emit("bingo:start", {
+      streamer: activeStreamer,
+      cards: backendCards,
+    });
+  }
 
   /*
 ========================
@@ -407,7 +399,7 @@ MARKED
 
       <ScrollView contentContainerStyle={styles.cardsGrid}>
         {cards.map((c, i) => (
-          <View key={i} style={styles.card}>
+          <View key={i} style={[styles.card, c.isSub && styles.subCard]}>
             <Text style={[styles.player, c.isSub && styles.subPlayer]}>
               {c.player} {c.isSub ? "⭐" : ""}
             </Text>
@@ -543,7 +535,7 @@ const styles = StyleSheet.create({
   },
 
   mark: {
-    backgroundColor: "#b7c582",
+    backgroundColor: "#FFD700",
   },
 
   num: {
@@ -575,7 +567,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
   },
   subPlayer: {
-    color: "#C5A582",
-    fontWeight: "bold"
-  }
+    color: "#FFD700",
+    fontWeight: "bold",
+  },
+  subCard: {
+    borderWidth: 3,
+    borderColor: "#FFD700",
+    shadowColor: "#FFD700",
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+  },
 });
