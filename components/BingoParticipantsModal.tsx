@@ -118,11 +118,11 @@ export default function ParticipantsModal({
                 />
                 {!raffleRunning ? (
                   <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
-                    <Text style={styles.text}>START RAFFLE</Text>
+                    <Text style={styles.text}>Obtener gente del chat</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
-                    <Text style={styles.text}>STOP RAFFLE</Text>
+                    <Text style={styles.text}>Parar de obtener</Text>
                   </TouchableOpacity>
                 )}
               </View>

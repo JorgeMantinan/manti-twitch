@@ -26,6 +26,7 @@ type BingoCard = (number | null)[][];
 type PlayerCard = {
   player: string;
   card: BingoCard;
+  isSub?: boolean;
 };
 
 export default function Bingo() {
@@ -258,24 +259,45 @@ START
 */
 
   function startGame() {
-    const cardsGenerated = participants.map((p) => ({
-      player: p.name,
-      card: generateSpanishCard(),
-    }));
 
-    setCards(cardsGenerated);
+  const cardsGenerated: PlayerCard[] = [];
 
-    const backendCards: Record<string, BingoCard> = {};
+  participants.forEach((p) => {
 
-    cardsGenerated.forEach((c) => {
-      backendCards[c.player] = c.card;
-    });
+    const amount = p.isSub ? 2 : 1;
 
-    socketRef.current?.emit("bingo:start", {
-      streamer: activeStreamer,
-      cards: backendCards,
-    });
-  }
+    for (let i = 0; i < amount; i++) {
+
+      cardsGenerated.push({
+        player: p.name,
+        card: generateSpanishCard(),
+        isSub: p.isSub
+      });
+
+    }
+
+  });
+
+  setCards(cardsGenerated);
+
+  const backendCards: Record<string, BingoCard[]> = {};
+
+  cardsGenerated.forEach((c) => {
+
+    if (!backendCards[c.player]) {
+      backendCards[c.player] = [];
+    }
+
+    backendCards[c.player].push(c.card);
+
+  });
+
+  socketRef.current?.emit("bingo:start", {
+    streamer: activeStreamer,
+    cards: backendCards,
+  });
+
+}
 
   /*
 ========================
@@ -386,7 +408,9 @@ MARKED
       <ScrollView contentContainerStyle={styles.cardsGrid}>
         {cards.map((c, i) => (
           <View key={i} style={styles.card}>
-            <Text style={styles.player}>{c.player}</Text>
+            <Text style={[styles.player, c.isSub && styles.subPlayer]}>
+              {c.player} {c.isSub ? "⭐" : ""}
+            </Text>
 
             {c.card.map((row: any, r: number) => (
               <View key={r} style={styles.row}>
@@ -550,4 +574,8 @@ const styles = StyleSheet.create({
   autoOn: {
     backgroundColor: "#4CAF50",
   },
+  subPlayer: {
+    color: "#C5A582",
+    fontWeight: "bold"
+  }
 });
