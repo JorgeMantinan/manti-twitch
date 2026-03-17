@@ -33,7 +33,8 @@ export default function Bingo() {
   /**System ROLES */
   const params = useLocalSearchParams();
   const role: Role = (params.role as Role) || "viewer";
-  const [streamer, setStreamer] = useState("");
+  const [streamer, setStreamer] = useState((params.streamer as string) || "");
+  const streamerRef = useRef("default");
   const [raffleWord, setRaffleWord] = useState("!sorteo");
   const [raffleRunning, setRaffleRunning] = useState(false);
 
@@ -53,7 +54,6 @@ export default function Bingo() {
 
   const [auto, setAuto] = useState(false);
 
-  const activeStreamer = streamer?.trim() || "default";
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -71,20 +71,20 @@ JOIN ROOM
   useEffect(() => {
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
 
-    const room = role === "mod" ? streamer : "default";
+    socketRef.current.on("connect", () => {
+    const activeStreamer =
+      streamer?.trim() || `solo-${socketRef.current?.id}`;
 
-    socketRef.current.emit("joinRoom", {
-      streamer: room,
+      console.log("📡 CONNECTED:", socketRef.current?.id);
+      console.log("📡 JOINING:", activeStreamer);
+      streamerRef.current = activeStreamer;
+
+      socketRef.current?.emit("bingo:join", {
+        streamer: streamerRef.current,
+      });
     });
-
-    socketRef.current.emit("bingo:join", {
-      streamer: room,
-    });
-
-    console.log("📡 Joined raffle room:", room);
 
     socketRef.current.on("newParticipant", (data: any) => {
-      console.log("NEW RAFFLE PARTICIPANT:", data);
 
       setParticipants((prev) => {
         const exists = prev.some(
@@ -104,8 +104,6 @@ JOIN ROOM
     });
 
     socketRef.current.on("bingo:number", (n: number) => {
-      console.log("🎱 RECEIVED NUMBER:", n);
-
       setCurrent(n);
       setDrawn((p) => [...p, n]);
       animateBall();
@@ -128,7 +126,21 @@ JOIN ROOM
     return () => {
       socketRef.current?.disconnect();
     };
-  }, [streamer]);
+  }, []);
+
+  /*
+========================
+CLEAN INTERVAL ON CHANGE STREAMER
+========================
+*/
+  useEffect(() => {
+    return () => {
+      if (autoRef.current) {
+        clearInterval(autoRef.current);
+        autoRef.current = null;
+      }
+    };
+  }, []);
 
   /*
 ========================
@@ -288,7 +300,7 @@ START
     });
 
     socketRef.current?.emit("bingo:start", {
-      streamer: activeStreamer,
+      streamer: streamerRef.current,
       cards: backendCards,
     });
   }
@@ -299,6 +311,13 @@ NEW GAME
 ========================
 */
   function newGame() {
+    if (autoRef.current) {
+      clearInterval(autoRef.current);
+      autoRef.current = null;
+    }
+
+    setAuto(false);
+
     setCards([]);
     setDrawn([]);
     setCurrent(null);
@@ -313,25 +332,28 @@ DRAW
 */
 
   function draw() {
-    console.log("DRAW STREAMER:", activeStreamer);
-    socketRef.current?.emit("bingo:draw", { streamer: activeStreamer });
+    console.log("DRAW STREAMER:", streamerRef.current);
+    socketRef.current?.emit("bingo:draw", { streamer: streamerRef.current });
   }
 
   function toggleAuto() {
-    if (auto) {
-      setAuto(false);
+    setAuto((prev) => {
+      if (prev) {
+        if (autoRef.current) {
+          clearInterval(autoRef.current);
+          autoRef.current = null;
+        }
+        return false;
+      } else {
+        autoRef.current = setInterval(() => {
+          socketRef.current?.emit("bingo:draw", {
+            streamer: streamerRef.current,
+          });
+        }, 2000);
 
-      if (autoRef.current) {
-        clearInterval(autoRef.current);
-        autoRef.current = null;
+        return true;
       }
-    } else {
-      setAuto(true);
-
-      autoRef.current = setInterval(() => {
-        socketRef.current?.emit("bingo:draw", { streamer: activeStreamer });
-      }, 2000);
-    }
+    });
   }
 
   /*
