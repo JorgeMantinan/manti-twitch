@@ -59,9 +59,9 @@ export default function Ships() {
   const bulletsRef = useRef<any[]>([]);
 
   const role: Role = (params.role as Role) || "viewer";
-  // const [role, setRole] = useState<Role>("viewer");
 
   const [streamer, setStreamer] = useState("");
+  const streamerRef = useRef("default");
   const [raffleWord, setRaffleWord] = useState("!sorteo");
   const [raffleRunning, setRaffleRunning] = useState(false);
 
@@ -73,53 +73,6 @@ export default function Ships() {
     if (Platform.OS === "web") return localStorage.getItem("userToken");
     return await SecureStore.getItemAsync("userToken");
   };
-
-  /*
-  JWT PARSER
-  */
-
-  // const parseJWT = (token: string) => {
-  //   try {
-  //     const payload = token.split(".")[1];
-  //     return JSON.parse(atob(payload));
-  //   } catch {
-  //     return null;
-  //   }
-  // };
-
-  /*
-  ROLE SYSTEM
-  */
-
-  // const determineRole = (decoded: any): Role => {
-  //   if (!decoded) return "viewer";
-
-  //   let scopes: string[] = [];
-
-  //   if (Array.isArray(decoded.scopes)) scopes = decoded.scopes;
-  //   else if (typeof decoded.scopes === "string")
-  //     scopes = decoded.scopes.split(" ");
-  //   else if (typeof decoded.scope === "string")
-  //     scopes = decoded.scope.split(" ");
-
-  //   if (scopes.includes("channel:read:subscriptions")) return "streamer";
-
-  //   if (scopes.includes("moderator:read:followers")) return "mod";
-
-  //   return "viewer";
-  // };
-
-  // const checkAuth = async () => {
-  //   const token = await getToken();
-  //   if (!token) return;
-
-  //   const decoded = parseJWT(token);
-  //   setRole(determineRole(decoded));
-  // };
-
-  // useEffect(() => {
-  //   checkAuth();
-  // }, []);
 
   /*
   STORAGE LOAD
@@ -163,18 +116,27 @@ export default function Ships() {
    3. SOCKETS listener
   */
   useEffect(() => {
+    if (socketRef.current?.connected) return;
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
-    socketRef.current.emit("joinRoom", {
-      streamer: role === "mod" ? streamer : "default",
+
+    socketRef.current.on("connect", () => {
+      const activeStreamer =
+        streamer?.trim() || `solo-${socketRef.current.id}`;
+
+      streamerRef.current = activeStreamer;
+
+      socketRef.current.emit("joinRoom", {
+        streamer: streamerRef.current,
+      });
     });
 
-    // Añadimos el tipo aquí (data: SocketData)
     socketRef.current.on("newParticipant", (data: SocketData) => {
       setParticipants((prev) => {
         const exists = prev.some(
           (p) =>
             p.name.toLowerCase() === data.participant.username.toLowerCase(),
         );
+
         if (exists) return prev;
 
         return [
@@ -188,9 +150,9 @@ export default function Ships() {
     });
 
     return () => {
-      if (socketRef.current) socketRef.current.disconnect();
+      socketRef.current?.disconnect();
     };
-  }, [streamer]);
+  }, []);
 
   /*
   PARTICIPANTS
@@ -239,7 +201,7 @@ export default function Ships() {
       },
       body: JSON.stringify({
         keyword: raffleWord,
-        selectedStreamer: role === "mod" ? streamer : undefined,
+        selectedStreamer: role === "mod" ? streamer : streamerRef.current,
       }),
     });
 

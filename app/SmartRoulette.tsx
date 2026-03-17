@@ -63,6 +63,7 @@ export default function SmartRoulette() {
   const [newUser, setNewUser] = useState("");
   const [keyword, setKeyword] = useState("!sorteo");
   const [streamer, setStreamer] = useState("");
+  const streamerRef = useRef("default");
   const role: Role = (params.role as Role) || "viewer";
 
   const [visualSlices, setVisualSlices] = useState<Participant[]>([]);
@@ -96,23 +97,23 @@ TOKEN
     SOCKET REAL-TIME LISTENER
   */
   useEffect(() => {
-    if (socketRef.current) return;
+    if (socketRef.current?.connected) return;
 
     const socket = io("https://manti-twitch-backend.onrender.com");
-
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("🟢 SOCKET RULETA conectado");
+      const activeStreamer =
+        streamer?.trim() || `solo-${socket.id}`;
+
+      streamerRef.current = activeStreamer;
 
       socket.emit("joinRoom", {
-        streamer: role === "mod" ? streamer : "default",
+        streamer: streamerRef.current,
       });
     });
 
     socket.on("newParticipant", (data: SocketData) => {
-      console.log("📩 RULETA recibió:", data.participant.username);
-
       setParticipants((prev) => {
         const exists = prev.some(
           (p) =>
@@ -132,13 +133,11 @@ TOKEN
       });
     });
 
-    socketRef.current = socket;
-
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [streamer]);
+  }, []);
 
   /*
 WEIGHT SYSTEM
@@ -155,7 +154,7 @@ WEIGHT SYSTEM
       }
     });
 
-    // shuffle para alternar
+    // Separate Subs
     for (let i = expanded.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [expanded[i], expanded[j]] = [expanded[j], expanded[i]];
@@ -294,7 +293,7 @@ BACKEND
       },
       body: JSON.stringify({
         keyword,
-        selectedStreamer: role === "mod" ? streamer : undefined,
+        selectedStreamer: role === "mod" ? streamer : streamerRef.current,
         subMult: 2,
         giftMult: 2,
       }),
