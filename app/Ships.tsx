@@ -203,7 +203,7 @@ export default function Ships() {
       },
       body: JSON.stringify({
         keyword: raffleWord,
-        selectedStreamer: role === "mod" ? streamer : streamerRef.current,
+        streamer: streamerRef.current,
       }),
     });
 

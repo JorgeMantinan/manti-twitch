@@ -77,7 +77,7 @@ JOIN ROOM
 
       streamerRef.current = activeStreamer;
 
-      socketRef.current?.emit("joinroom", {
+      socketRef.current?.emit("joinRoom", {
         game: "bingo",
         streamer: activeStreamer,
       });
@@ -159,7 +159,7 @@ RAFFLE
       },
       body: JSON.stringify({
         keyword: raffleWord,
-        selectedStreamer: role === "mod" ? streamer : undefined,
+        streamer: streamerRef.current,
       }),
     });
 

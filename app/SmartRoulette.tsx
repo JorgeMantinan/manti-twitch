@@ -295,7 +295,7 @@ BACKEND
       },
       body: JSON.stringify({
         keyword,
-        selectedStreamer: role === "mod" ? streamer : streamerRef.current,
+        streamer: streamerRef.current,
         subMult: 2,
         giftMult: 2,
       }),
