@@ -429,9 +429,6 @@ export default function Ships() {
 
         {role === "mod" && (
           <>
-            <Text style={{ color: "#AAA", marginBottom: 4 }}>
-              Canal donde hacer el raffle
-            </Text>
 
             <TextInput
               style={styles.textInput}
@@ -452,13 +449,13 @@ export default function Ships() {
             />
 
             {!raffleRunning && (
-              <TouchableOpacity style={styles.startBtn} onPress={startRaffle}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
                 <Text style={styles.startBtnText}>Obtener gente del chat</Text>
               </TouchableOpacity>
             )}
 
             {raffleRunning && (
-              <TouchableOpacity style={styles.startBtn} onPress={stopRaffle}>
+              <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
                 <Text style={styles.startBtnText}>Dejar de obtener</Text>
               </TouchableOpacity>
             )}
@@ -790,4 +787,18 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   restartText: { color: "#FFF", fontWeight: "bold" },
+  secondaryButton: {
+    backgroundColor: "#888",
+    padding: 12,
+    borderRadius: 6,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  dangerButton: {
+    backgroundColor: "#C94B4B",
+    padding: 12,
+    borderRadius: 6,
+    minWidth: 120,
+    alignItems: "center",
+  },
 });
