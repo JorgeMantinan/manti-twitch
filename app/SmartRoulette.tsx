@@ -17,6 +17,8 @@ import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams } from "expo-router";
 import { io } from "socket.io-client";
 
+import { getSessionId } from "../utils/session";
+
 type Participant = {
   username: string;
   weight: number;
@@ -103,12 +105,12 @@ TOKEN
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      const activeStreamer =
-        streamer?.trim() || `solo-${socket.id}`;
+      const activeStreamer = streamer?.trim() || getSessionId();
 
       streamerRef.current = activeStreamer;
 
       socket.emit("joinRoom", {
+        game: "roulette",
         streamer: streamerRef.current,
       });
     });

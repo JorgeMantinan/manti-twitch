@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams } from "expo-router";
 
+import { getSessionId } from "../utils/session";
 import { generateSpanishCard } from "../utils/bingoCard";
 import ParticipantsModal from "../components/BingoParticipantsModal";
 import BingoWinModal from "../components/BingoWinModal";
@@ -72,15 +73,13 @@ JOIN ROOM
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
 
     socketRef.current.on("connect", () => {
-    const activeStreamer =
-      streamer?.trim() || `solo-${socketRef.current?.id}`;
+    const activeStreamer = streamer?.trim() || getSessionId();
 
-      console.log("📡 CONNECTED:", socketRef.current?.id);
-      console.log("📡 JOINING:", activeStreamer);
       streamerRef.current = activeStreamer;
 
-      socketRef.current?.emit("bingo:join", {
-        streamer: streamerRef.current,
+      socketRef.current?.emit("joinroom", {
+        game: "bingo",
+        streamer: activeStreamer,
       });
     });
 

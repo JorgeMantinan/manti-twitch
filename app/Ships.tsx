@@ -17,6 +17,8 @@ import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams } from "expo-router";
 import { io } from "socket.io-client";
 
+import { getSessionId } from "../utils/session";
+
 const { width, height } = Dimensions.get("window");
 
 const STORAGE_KEY = "participantes_barcos";
@@ -120,13 +122,13 @@ export default function Ships() {
     socketRef.current = io("https://manti-twitch-backend.onrender.com");
 
     socketRef.current.on("connect", () => {
-      const activeStreamer =
-        streamer?.trim() || `solo-${socketRef.current.id}`;
+      const activeStreamer = streamer?.trim() || getSessionId();
 
       streamerRef.current = activeStreamer;
 
       socketRef.current.emit("joinRoom", {
-        streamer: streamerRef.current,
+        game: "ships",
+        streamer: activeStreamer,
       });
     });
 
