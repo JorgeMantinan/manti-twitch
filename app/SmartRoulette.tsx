@@ -36,8 +36,6 @@ interface SocketData {
 
 type Role = "viewer" | "mod" | "streamer";
 
-let raffleRunning: boolean;
-
 // Roulette width
 const { width } = Dimensions.get("window");
 const WHEEL_SIZE = Math.min(width * 0.45, 520);
@@ -86,8 +84,6 @@ export default function SmartRoulette() {
     inputRange: [0, 10],
     outputRange: ["0deg", "3600deg"],
   });
-
-  raffleRunning = false;
 
   /*
 TOKEN
@@ -306,7 +302,7 @@ BACKEND
         giftMult: 2,
       }),
     });
-
+    
     setRunning(true);
   };
 
@@ -445,29 +441,6 @@ UI
       <View style={styles.leftSide}>
         <Text style={styles.title}>Smart Twitch Roulette</Text>
 
-       {role !== "viewer" && !running && (
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionLabel}>Palabra del Sorteo:</Text>
-              <View style={styles.row}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="!sorteo"
-                  value={keyword}
-                  onChangeText={setKeyword}
-                />
-                {!raffleRunning ? (
-                  <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
-                    <Text style={styles.buttonText}>Obtener gente del chat</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
-                    <Text style={styles.buttonText}>Parar de obtener</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
-
         {role === "mod" && (
           <TextInput
             style={styles.input}
@@ -503,6 +476,29 @@ UI
       </View>
 
       <View style={styles.rightSide}>
+
+        {role !== "viewer" && !running && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionLabel}>Palabra del Sorteo:</Text>
+              <View>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="!sorteo"
+                  value={keyword}
+                  onChangeText={setKeyword}
+                />
+                {!running ? (
+                  <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
+                    <Text style={styles.buttonText}>Obtener gente del chat</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
+                    <Text style={styles.buttonText}>Parar de obtener</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
         <Text style={styles.listTitle}>
           Participants ({participants.length})
         </Text>
