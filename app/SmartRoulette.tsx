@@ -441,15 +441,6 @@ UI
       <View style={styles.leftSide}>
         <Text style={styles.title}>Smart Twitch Roulette</Text>
 
-        {role === "mod" && (
-          <TextInput
-            style={styles.input}
-            placeholder="Streamer channel"
-            value={streamer}
-            onChangeText={setStreamer}
-          />
-        )}
-
         <View style={styles.wheelContainer}>
           <Animated.View
             style={{
@@ -479,7 +470,14 @@ UI
 
         {role !== "viewer" && !running && (
             <View style={styles.sectionContainer}>
-              <Text style={styles.sectionLabel}>Palabra del Sorteo:</Text>
+              {role === "mod" && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Streamer channel"
+                  value={streamer}
+                  onChangeText={setStreamer}
+                />
+              )}
               <View>
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
