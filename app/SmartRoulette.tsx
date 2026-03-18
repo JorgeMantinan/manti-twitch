@@ -468,35 +468,35 @@ UI
 
       <View style={styles.rightSide}>
 
-        {role !== "viewer" && !running && (
-            <View style={styles.sectionContainer}>
-              {role === "mod" && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Streamer channel"
-                  value={streamer}
-                  onChangeText={setStreamer}
-                />
+        {role !== "viewer" && (
+          <View style={styles.sectionContainer}>
+            {role === "mod" && (
+              <TextInput
+                style={styles.input}
+                placeholder="Streamer channel"
+                value={streamer}
+                onChangeText={setStreamer}
+              />
+            )}
+            <View>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="!sorteo"
+                value={keyword}
+                onChangeText={setKeyword}
+              />
+              {!running ? (
+                <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
+                  <Text style={styles.buttonText}>Obtener gente del chat</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
+                  <Text style={styles.buttonText}>Parar de obtener</Text>
+                </TouchableOpacity>
               )}
-              <View>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="!sorteo"
-                  value={keyword}
-                  onChangeText={setKeyword}
-                />
-                {!running ? (
-                  <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
-                    <Text style={styles.buttonText}>Obtener gente del chat</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
-                    <Text style={styles.buttonText}>Parar de obtener</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
             </View>
-          )}
+          </View>
+        )}
         <Text style={styles.listTitle}>
           Participants ({participants.length})
         </Text>
