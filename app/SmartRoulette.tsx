@@ -297,7 +297,7 @@ BACKEND
         keyword,
         game: "roulette",
         streamer: streamerRef.current,
-        twitchChannel: streamerRef.current, // TO-DO Had a bug with the raffle and the user not login. branch SR-Ships-rooms
+        twitchChannel: streamer,
         subMult: 2,
         giftMult: 2,
       }),

@@ -205,7 +205,7 @@ export default function Ships() {
         keyword: raffleWord,
         game: "ships",
         streamer: streamerRef.current,
-        twitchChannel: streamerRef.current, // TO-DO Had a bug with the raffle and the user not login. branch SR-Ships-rooms
+        twitchChannel: streamer,
       }),
     });
 
