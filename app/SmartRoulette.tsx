@@ -36,6 +36,8 @@ interface SocketData {
 
 type Role = "viewer" | "mod" | "streamer";
 
+let raffleRunning: boolean;
+
 // Roulette width
 const { width } = Dimensions.get("window");
 const WHEEL_SIZE = Math.min(width * 0.45, 520);
@@ -84,6 +86,8 @@ export default function SmartRoulette() {
     inputRange: [0, 10],
     outputRange: ["0deg", "3600deg"],
   });
+
+  raffleRunning = false;
 
   /*
 TOKEN
@@ -441,14 +445,28 @@ UI
       <View style={styles.leftSide}>
         <Text style={styles.title}>Smart Twitch Roulette</Text>
 
-        {role !== "viewer" && (
-          <TextInput
-            placeholder="Keyword (!sorteo)"
-            value={keyword}
-            onChangeText={setKeyword}
-            style={styles.input}
-          />
-        )}
+       {role !== "viewer" && !running && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionLabel}>Palabra del Sorteo:</Text>
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="!sorteo"
+                  value={keyword}
+                  onChangeText={setKeyword}
+                />
+                {!raffleRunning ? (
+                  <TouchableOpacity style={styles.secondaryButton} onPress={startRaffle}>
+                    <Text style={styles.buttonText}>Obtener gente del chat</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.dangerButton} onPress={stopRaffle}>
+                    <Text style={styles.buttonText}>Parar de obtener</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
 
         {role === "mod" && (
           <TextInput
@@ -476,18 +494,6 @@ UI
 
           <View style={styles.pointer} />
         </View>
-
-        {role !== "viewer" && !running && (
-          <TouchableOpacity style={styles.button} onPress={startRaffle}>
-            <Text style={styles.buttonText}>Start Raffle</Text>
-          </TouchableOpacity>
-        )}
-
-        {role !== "viewer" && running && (
-          <TouchableOpacity style={styles.button} onPress={stopRaffle}>
-            <Text style={styles.buttonText}>Stop Raffle</Text>
-          </TouchableOpacity>
-        )}
 
         <TouchableOpacity style={styles.button} onPress={pickWinner}>
           <Text style={styles.buttonText}>GIRAR RULETA</Text>
@@ -637,5 +643,33 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 6,
     marginTop: 20,
+  },
+
+
+
+  sectionContainer: {
+    marginBottom: 15,
+    width: '100%',
+  },
+  sectionLabel: {
+    fontSize: 12,
+    color: "#777",
+    marginBottom: 5,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+  },
+  secondaryButton: {
+    backgroundColor: "#888",
+    padding: 12,
+    borderRadius: 6,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  dangerButton: {
+    backgroundColor: "#C94B4B",
+    padding: 12,
+    borderRadius: 6,
+    minWidth: 120,
+    alignItems: "center",
   },
 });
