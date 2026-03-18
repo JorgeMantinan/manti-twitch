@@ -159,6 +159,7 @@ RAFFLE
       },
       body: JSON.stringify({
         keyword: raffleWord,
+        game: "bingo",
         streamer: streamerRef.current,
       }),
     });

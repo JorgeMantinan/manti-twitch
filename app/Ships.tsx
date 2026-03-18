@@ -203,6 +203,7 @@ export default function Ships() {
       },
       body: JSON.stringify({
         keyword: raffleWord,
+        game: "ships",
         streamer: streamerRef.current,
       }),
     });

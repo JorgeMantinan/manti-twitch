@@ -295,6 +295,7 @@ BACKEND
       },
       body: JSON.stringify({
         keyword,
+        game: "roulette",
         streamer: streamerRef.current,
         subMult: 2,
         giftMult: 2,
