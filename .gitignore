@@ -3,6 +3,7 @@
 # dependencies
 node_modules/
 
+# /assets/node_modules have the icons of MaterialCommunityIcons
 !docs/assets/node_modules/
 
 # Expo

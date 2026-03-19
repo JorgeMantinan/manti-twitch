@@ -19,19 +19,19 @@ const USER_TOOLS = [
     id: '1', 
     title: 'Ruleta', 
     route: '/SmartRoulette', 
-    icon: 'ship-wheel' 
+    icon: 'clover' 
   },
   { 
     id: '2', 
     title: 'Juego de Barcos', 
     route: '/Ships',
-    icon: 'ferris-wheel' 
+    icon: 'ship-wheel'
   },
   { 
     id: '3', 
     title: 'BINGO', 
     route: '/Bingo',
-    icon: 'harmony-o-s' 
+    icon: 'alpha-b-circle-outline' 
   },
 ];
 

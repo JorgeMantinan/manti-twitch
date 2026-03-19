@@ -40,8 +40,8 @@ const ROLE = "streamer";
 
 const STREAMER_TOOLS = [
     { id: '1', title: 'Ruleta', route: '/SmartRoulette', icon: 'clover' },
-    { id: '2', title: 'Juego de Barcos', route: '/Ships', icon: 'ferris-wheel'},
-    { id: '3', title: 'BINGO', route: '/Bingo', icon: 'harmony-o-s'},
+    { id: '2', title: 'Juego de Barcos', route: '/Ships', icon: 'ship-wheel'},
+    { id: '3', title: 'BINGO', route: '/Bingo', icon: 'halpha-b-circle-outline'},
     // { id: '4', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
     // { id: '5', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
     // { id: '6', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
