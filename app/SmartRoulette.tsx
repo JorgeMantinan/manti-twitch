@@ -344,6 +344,9 @@ PICK WINNER
 */
 
   const pickWinner = async () => {
+    // Force stop raffle
+    setRunning(false);
+    
     if (participants.length === 0) return;
 
     const weighted = buildWeightedParticipants();

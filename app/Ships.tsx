@@ -325,7 +325,7 @@ export default function Ships() {
     bulletsRef.current = [];
 
     setWinner(null);
-
+    setRaffleRunning(false);
     setGameState("playing");
   };
 

@@ -401,6 +401,7 @@ MARKED
         stopRaffle={stopRaffle}
         fetchSubs={fetchSubs}
         onStart={() => {
+          setRaffleRunning(false);
           setModalVisible(false);
           startGame();
         }}
