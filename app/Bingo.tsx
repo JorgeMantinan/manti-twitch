@@ -30,6 +30,11 @@ type PlayerCard = {
   isSub?: boolean;
 };
 
+type Participant = {
+  name: string;
+  isSub?: boolean;
+};
+
 export default function Bingo() {
   /**System ROLES */
   const params = useLocalSearchParams();
@@ -39,7 +44,7 @@ export default function Bingo() {
   const [raffleWord, setRaffleWord] = useState("!sorteo");
   const [raffleRunning, setRaffleRunning] = useState(false);
 
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [cards, setCards] = useState<PlayerCard[]>([]);
 
   const [drawn, setDrawn] = useState<number[]>([]);
@@ -97,6 +102,7 @@ JOIN ROOM
           ...prev,
           {
             name: data.participant.username,
+            isSub: data.participant.isSub || false,
           },
         ];
       });
@@ -181,19 +187,31 @@ RAFFLE
 
     const data = await res.json();
 
-    const parsed = data.data.map((p: any) => ({
+    const parsed: Participant[] = data.data.map((p: any) => ({
       name: p.username,
       isSub: p.isSub,
     }));
 
     setParticipants((prev) => {
-      const existing = new Set(prev.map((p) => p.name.toLowerCase()));
+      const map = new Map();
 
-      const newOnes = parsed.filter(
-        (p: any) => !existing.has(p.name.toLowerCase()),
-      );
+      prev.forEach((p) => {
+        map.set(p.name.toLowerCase(), p);
+      });
 
-      return [...prev, ...newOnes];
+      parsed.forEach((p: Participant) => {
+        const existing = map.get(p.name.toLowerCase());
+
+        if (existing) {
+          if (p.isSub) {
+            existing.isSub = true;
+          }
+        } else {
+          map.set(p.name.toLowerCase(), p);
+        }
+      });
+
+      return Array.from(map.values());
     });
 
     setRaffleRunning(false);
