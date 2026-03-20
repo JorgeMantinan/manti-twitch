@@ -304,8 +304,8 @@ export default function Ships() {
       name: p.name,
       isSub: p.isSub,
 
-      hp: p.isSub ? 160 : 120,
-      maxHp: p.isSub ? 160 : 120,
+      hp: p.isSub ? 320 : 240,
+      maxHp: p.isSub ? 320 : 240,
 
       x: Math.random() * (width - 100) + 50,
       y: Math.random() * (height - 200) + 100,
