@@ -11,6 +11,7 @@ import {
 
 type Participant = {
   name: string;
+  isSub?: boolean;
 };
 
 type Role = "viewer" | "mod" | "streamer";
@@ -69,7 +70,7 @@ export default function ParticipantsModal({
   function add() {
     if (!name.trim()) return;
 
-    setParticipants((p) => [...p, { name }]);
+    setParticipants((p) => [...p, { name, isSub: false }]);
 
     setName("");
   }
@@ -128,6 +129,11 @@ export default function ParticipantsModal({
               </View>
             </View>
           )}
+          {role === "streamer" && (
+            <TouchableOpacity style={styles.addBtn} onPress={fetchSubs}>
+              <Text style={styles.btnText}>OBTENER SUBS</Text>
+            </TouchableOpacity>
+          )}
 
           {/* 3. SECCIÓN AÑADIR MANUALMENTE */}
           <View style={styles.sectionContainer}>
@@ -149,7 +155,9 @@ export default function ParticipantsModal({
           <ScrollView style={styles.list}>
             {participants.map((p, i) => (
               <View key={i} style={styles.playerRow}>
-                <Text style={styles.playerName}>{p.name}</Text>
+                <Text style={styles.playerName}>
+                  {p.name} {p.isSub ? "⭐" : ""}
+                </Text>
                 <TouchableOpacity onPress={() => remove(i)} style={styles.removeBtn}>
                   <Text style={styles.btnText}>X</Text>
                 </TouchableOpacity>
