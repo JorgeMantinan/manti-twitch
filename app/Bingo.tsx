@@ -116,14 +116,16 @@ JOIN ROOM
     });
 
     socketRef.current.on("bingo:line", (player) => {
-      const realPlayer = player.split("_")[0];
+      const lastUnderscore = player.lastIndexOf("_");
+      const realPlayer = lastUnderscore !== -1 ? player.substring(0, lastUnderscore) : player;
       setWinTitle("LINEA");
       setWinPlayer(realPlayer);
       setWinVisible(true);
     });
 
     socketRef.current.on("bingo:bingo", (player) => {
-      const realPlayer = player.split("_")[0];
+      const lastUnderscore = player.lastIndexOf("_");
+      const realPlayer = lastUnderscore !== -1 ? player.substring(0, lastUnderscore) : player;
       setWinTitle("BINGO");
       setWinPlayer(realPlayer);
       setWinVisible(true);
