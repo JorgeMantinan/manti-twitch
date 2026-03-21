@@ -4,6 +4,7 @@ import {
   FlatList, StyleSheet, Alert, ScrollView 
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { API_CONFIG } from '../constants/api';
 
 interface Follower {
   user_name: string;
@@ -14,7 +15,6 @@ interface DecodedToken {
   scopes: string[];
 }
 
-// Utilidad para decodificar el token y verificar scopes
 function decodeJWT(token: string): DecodedToken | null {
   try {
     const payload = token.split('.')[1];
@@ -34,13 +34,11 @@ const ListFollowers = () => {
   const [followers, setFollowers] = useState<Follower[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Estados para la gestión de streamers
   const [streamers, setStreamers] = useState<string[]>([]);
   const [selectedStreamer, setSelectedStreamer] = useState('');
   const [newNick, setNewNick] = useState('');
   const [showAddInput, setShowAddInput] = useState(false);
 
-  // Cargar streamers guardados al iniciar
   useEffect(() => {
     loadStreamers();
   }, []);
@@ -93,7 +91,6 @@ const ListFollowers = () => {
       }
 
       const decoded = decodeJWT(token);
-      // Verificamos permiso de moderador o de canal propio
       const hasPerms = decoded?.scopes.some(s => 
         s === "moderator:read:followers" || s === "channel:read:subscriptions"
       );
@@ -103,7 +100,7 @@ const ListFollowers = () => {
         return;
       }
 
-      const response = await fetch("https://manti-twitch-backend.onrender.com/api/followers-between-dates", {
+      const response = await fetch(API_CONFIG.ENDPOINTS.FOLLOWERS, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -133,7 +130,6 @@ const ListFollowers = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Buscador de Seguidores</Text>
 
-      {/* Lista Horizontal de Streamers */}
       <View style={styles.streamerSelector}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
           {streamers.map((nick) => (
@@ -154,7 +150,6 @@ const ListFollowers = () => {
         </ScrollView>
       </View>
 
-      {/* Input para añadir nuevo nick */}
       {showAddInput && (
         <View style={styles.addInputGroup}>
           <TextInput 
@@ -170,7 +165,6 @@ const ListFollowers = () => {
         </View>
       )}
 
-      {/* Inputs de Fechas */}
       <View style={styles.inputGroup}>
         <TextInput 
           placeholder="Inicio (YYYY-MM-DD)" 

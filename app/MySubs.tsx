@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Platform, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { API_CONFIG } from '../constants/api';
 
 interface Subscriber {
   user_name: string;
@@ -70,7 +71,7 @@ const MySubs = () => {
       }
 
       const response = await fetch(
-        "https://manti-twitch-backend.onrender.com/api/subs",
+        API_CONFIG.ENDPOINTS.SUBS,
         {
           method: 'POST',
           headers: {

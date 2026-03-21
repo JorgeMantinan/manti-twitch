@@ -19,6 +19,8 @@ import { io } from "socket.io-client";
 
 import { getSessionId } from "../utils/session";
 
+import { API_CONFIG } from '../constants/api';
+
 const { width, height } = Dimensions.get("window");
 
 const STORAGE_KEY = "participantes_barcos";
@@ -195,7 +197,7 @@ export default function Ships() {
 
     const token = await getToken();
 
-    await fetch("https://manti-twitch-backend.onrender.com/api/raffle/start", {
+    await fetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -216,7 +218,7 @@ export default function Ships() {
     const token = await getToken();
 
     const res = await fetch(
-      "https://manti-twitch-backend.onrender.com/api/raffle/stop",
+      API_CONFIG.ENDPOINTS.RAFFLE_STOP,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -253,7 +255,7 @@ export default function Ships() {
     const token = await getToken();
 
     const res = await fetch(
-      "https://manti-twitch-backend.onrender.com/api/subs",
+      API_CONFIG.ENDPOINTS.SUBS,
       {
         method: "POST",
         headers: {

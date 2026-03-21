@@ -18,6 +18,7 @@ import { useLocalSearchParams } from "expo-router";
 import { io } from "socket.io-client";
 
 import { getSessionId } from "../utils/session";
+import { API_CONFIG } from '../constants/api';
 
 type Participant = {
   username: string;
@@ -287,7 +288,7 @@ BACKEND
 
     const token = await getToken();
 
-    await fetch("https://manti-twitch-backend.onrender.com/api/raffle/start", {
+    await fetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -312,7 +313,7 @@ BACKEND
     const token = await getToken();
 
     const res = await fetch(
-      "https://manti-twitch-backend.onrender.com/api/raffle/stop",
+      API_CONFIG.ENDPOINTS.RAFFLE_STOP,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -359,7 +360,7 @@ PICK WINNER
       const token = await getToken();
 
       const res = await fetch(
-        "https://manti-twitch-backend.onrender.com/api/raffle/pick-winner",
+        API_CONFIG.ENDPOINTS.PICK_WINNER,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

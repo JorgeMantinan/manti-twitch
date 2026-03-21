@@ -93,7 +93,6 @@ export default function ParticipantsModal({
           
           <Text style={styles.title}>Participantes</Text>
 
-          {/* 1. SECCIÓN CANAL (Solo si es Mod) */}
           {role === "mod" && (
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionLabel}>Canal del Streamer:</Text>
@@ -106,7 +105,6 @@ export default function ParticipantsModal({
             </View>
           )}
 
-          {/* 2. SECCIÓN SORTEO (Raffle) */}
           {role !== "viewer" && (
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionLabel}>Palabra del Sorteo:</Text>
@@ -135,7 +133,6 @@ export default function ParticipantsModal({
             </TouchableOpacity>
           )}
 
-          {/* 3. SECCIÓN AÑADIR MANUALMENTE */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionLabel}>Añadir Manualmente:</Text>
             <View style={styles.row}>
@@ -151,7 +148,6 @@ export default function ParticipantsModal({
             </View>
           </View>
 
-          {/* LISTADO Y BOTONES FINALES */}
           <ScrollView style={styles.list}>
             {participants.map((p, i) => (
               <View key={i} style={styles.playerRow}>

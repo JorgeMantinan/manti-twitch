@@ -15,13 +15,12 @@ import {
 import { useRouter, RelativePathString } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from "jwt-decode";
+import { API_CONFIG } from '../constants/api';
 
 export default function App() {
 
   const router = useRouter();
-  const [authUrl] = useState<string>(
-    "https://manti-twitch-backend.onrender.com/auth/twitch"
-  );
+  const authUrl = API_CONFIG.ENDPOINTS.AUTH_TWITCH;
 
   const [isLogged, setIsLogged] = useState(false);
   const [scopes, setScopes] = useState<string[]>([]);

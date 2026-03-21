@@ -19,6 +19,7 @@ import { getSessionId } from "../utils/session";
 import { generateSpanishCard } from "../utils/bingoCard";
 import ParticipantsModal from "../components/BingoParticipantsModal";
 import BingoWinModal from "../components/BingoWinModal";
+import { API_CONFIG } from '../constants/api';
 
 type Role = "viewer" | "mod" | "streamer";
 
@@ -157,7 +158,7 @@ RAFFLE
 
     const token = await getToken();
 
-    await fetch("https://manti-twitch-backend.onrender.com/api/raffle/start", {
+    await fetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -178,7 +179,7 @@ RAFFLE
     const token = await getToken();
 
     const res = await fetch(
-      "https://manti-twitch-backend.onrender.com/api/raffle/stop",
+      API_CONFIG.ENDPOINTS.RAFFLE_STOP,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -229,7 +230,7 @@ GET SUBS
     const token = await getToken();
 
     const res = await fetch(
-      "https://manti-twitch-backend.onrender.com/api/subs",
+      API_CONFIG.ENDPOINTS.SUBS,
       {
         method: "POST",
         headers: {
