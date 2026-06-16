@@ -1,3 +1,4 @@
+/* global jest */
 const Haptics = {
   impactAsync: jest.fn(() => Promise.resolve()),
   ImpactFeedbackStyle: {

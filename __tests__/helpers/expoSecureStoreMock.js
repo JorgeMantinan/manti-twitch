@@ -1,3 +1,4 @@
+/* global jest */
 const ExpoSecureStore = {
   getItemAsync: jest.fn(() => Promise.resolve(null)),
   setItemAsync: jest.fn(() => Promise.resolve()),
