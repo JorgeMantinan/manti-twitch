@@ -102,7 +102,10 @@ TOKEN
   useEffect(() => {
     if (socketRef.current?.connected) return;
 
-    const socket = io("https://manti-twitch-backend.onrender.com");
+    const socket = io("https://manti-twitch-backend.onrender.com", {
+      reconnection: false,
+      timeout: 5000,
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -114,6 +117,10 @@ TOKEN
         game: "roulette",
         streamer: streamerRef.current,
       });
+    });
+
+    socket.on("connect_error", () => {
+      // Silent fail — socket not needed for local-only features
     });
 
     socket.on("newParticipant", (data: SocketData) => {

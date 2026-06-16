@@ -76,7 +76,10 @@ JOIN ROOM
 */
 
   useEffect(() => {
-    socketRef.current = io("https://manti-twitch-backend.onrender.com");
+    socketRef.current = io("https://manti-twitch-backend.onrender.com", {
+      reconnection: false,
+      timeout: 5000,
+    });
 
     socketRef.current.on("connect", () => {
     const activeStreamer = streamer?.trim() || getSessionId();
