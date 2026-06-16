@@ -1,0 +1,20 @@
+diff --git a/node_modules/react-native-web/dist/modules/createDOMProps/index.js b/node_modules/react-native-web/dist/modules/createDOMProps/index.js
+index 18f5e8b..6449e62 100644
+--- a/node_modules/react-native-web/dist/modules/createDOMProps/index.js
++++ b/node_modules/react-native-web/dist/modules/createDOMProps/index.js
+@@ -801,9 +801,12 @@ var createDOMProps = (elementType, props, options) => {
+   }
+ 
+   // Resolve styles
+-  if (pointerEvents != null) {
+-    warnOnce('pointerEvents', "props.pointerEvents is deprecated. Use style.pointerEvents");
+-  }
++  // Suppressed: react-native-web fires this for ANY View that receives pointerEvents
++  // as a prop from internal/external components. The functionality still works correctly
++  // when pointerEvents is passed as a prop — the only difference is this warning.
++  // if (pointerEvents != null) {
++  //   warnOnce('pointerEvents', "props.pointerEvents is deprecated. Use style.pointerEvents");
++  // }
+   var _StyleSheet = StyleSheet([style, pointerEvents && pointerEventsStyles[pointerEvents]], _objectSpread({
+       writingDirection: 'ltr'
+     }, options)),
