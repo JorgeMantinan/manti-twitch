@@ -34,7 +34,7 @@ describe('Ships battle', () => {
   it('adds only subscribers and starts a battle', () => {
     cy.visit('/Ships?role=viewer', { timeout: 15000 })
 
-    cy.contains('👑 SUB').click()
+    cy.contains(/^🚤$/).click()
 
     const subs = ['SubOne', 'SubTwo', 'SubThree']
     subs.forEach((name) => {
@@ -61,7 +61,7 @@ describe('Ships battle', () => {
     cy.contains('+').click()
     cy.contains(`🚤 NonSubTwo`).should('be.visible')
 
-    cy.contains('👑 SUB').click()
+    cy.contains(/^🚤$/).click()
 
     cy.get('[placeholder="Nombre"]').type('SubOne')
     cy.contains('+').click()
@@ -86,9 +86,9 @@ describe('Ships battle', () => {
     cy.get('[placeholder="Nombre"]').type('Bob')
     cy.contains('+').click()
 
-    cy.contains('Alice').parent().contains('Quitar').click()
-    cy.contains('Alice').should('not.exist')
-    cy.contains('Bob').should('be.visible')
+    cy.contains('Quitar').first().click()
+    cy.contains('🚤 Alice').should('not.exist')
+    cy.contains('🚤 Bob').should('be.visible')
   })
 
   it('clears all participants', () => {

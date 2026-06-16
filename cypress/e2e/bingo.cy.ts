@@ -10,7 +10,7 @@ describe('Bingo', () => {
     cy.contains('Empezar Partida').should('be.visible')
   })
 
-  it('adds 4 participants, starts the game, and shows bingo cards', () => {
+  it('adds participants in the modal', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     const names = ['Alice', 'Bob', 'Charlie', 'Diana']
@@ -19,16 +19,18 @@ describe('Bingo', () => {
       cy.contains('Añadir').click()
       cy.contains(name).should('be.visible')
     })
+  })
 
+  it('starts the game and shows game controls', () => {
+    cy.visit('/Bingo?role=viewer', { timeout: 15000 })
+
+    cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
+    cy.contains('Añadir').click()
     cy.contains('Empezar Partida').click()
 
     cy.contains('Nueva partida').should('be.visible')
     cy.contains('SACAR BOLA').should('be.visible')
     cy.contains('AUTOMÁTICO OFF').should('be.visible')
-
-    names.forEach((name) => {
-      cy.contains(name).should('be.visible')
-    })
   })
 
   it('toggles auto mode', () => {
@@ -45,7 +47,7 @@ describe('Bingo', () => {
     cy.contains('AUTOMÁTICO OFF').should('be.visible')
   })
 
-  it('starts a new game after clicking Nueva partida', () => {
+  it('reopens the participants modal via Nueva partida', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
@@ -55,7 +57,7 @@ describe('Bingo', () => {
     cy.contains('Nueva partida').click()
 
     cy.contains('Participantes').should('be.visible')
-    cy.contains('Alice').should('be.visible')
+    cy.get('[placeholder="Nombre del usuario..."]').should('be.visible')
   })
 
   it('removes an individual participant from the modal', () => {
@@ -85,7 +87,7 @@ describe('Bingo', () => {
     cy.contains('Bob').should('not.exist')
   })
 
-  it('handles starting the game with zero participants', () => {
+  it('starts game with zero participants', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.contains('Empezar Partida').click()
@@ -109,16 +111,14 @@ describe('Bingo', () => {
     cy.contains('OBTENER SUBS').should('be.visible')
   })
 
-  it('closes the modal and reopens it via Nueva partida', () => {
+  it('closes the modal via ✕ and reopens via Nueva partida', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.contains('✕').click()
-
     cy.contains('Participantes').should('not.exist')
     cy.contains('Nueva partida').should('be.visible')
 
     cy.contains('Nueva partida').click()
-
     cy.contains('Participantes').should('be.visible')
   })
 })

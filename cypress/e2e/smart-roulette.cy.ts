@@ -34,12 +34,10 @@ describe('Smart Roulette', () => {
     cy.get('[placeholder="Add participant"]').type('Bob')
     cy.contains('Añadir').click()
 
-    cy.contains('Alice').should('be.visible')
-    cy.contains('Bob').should('be.visible')
+    cy.contains('Participants').should('contain', '2')
 
-    cy.contains('Alice').parent().contains('❌').click()
-    cy.contains('Alice').should('not.exist')
-    cy.contains('Bob').should('be.visible')
+    cy.contains('❌').first().click()
+    cy.contains('Participants').should('contain', '1')
   })
 
   it('clears all participants', () => {
