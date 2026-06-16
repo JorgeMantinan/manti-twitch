@@ -16,7 +16,7 @@ describe('Bingo', () => {
     const names = ['Alice', 'Bob', 'Charlie', 'Diana']
     names.forEach((name) => {
       cy.get('[placeholder="Nombre del usuario..."]').type(name)
-      cy.contains('Añadir').click()
+      cy.contains(/^Añadir$/).click()
       cy.contains(name).should('be.visible')
     })
   })
@@ -25,7 +25,7 @@ describe('Bingo', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
-    cy.contains('Añadir').click()
+    cy.contains(/^Añadir$/).click()
     cy.contains('Empezar Partida').click()
 
     cy.contains('Nueva partida').should('be.visible')
@@ -37,7 +37,7 @@ describe('Bingo', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
-    cy.contains('Añadir').click()
+    cy.contains(/^Añadir$/).click()
     cy.contains('Empezar Partida').click()
 
     cy.contains('AUTOMÁTICO OFF').click()
@@ -51,7 +51,7 @@ describe('Bingo', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
-    cy.contains('Añadir').click()
+    cy.contains(/^Añadir$/).click()
     cy.contains('Empezar Partida').click()
 
     cy.contains('Nueva partida').click()
@@ -64,9 +64,9 @@ describe('Bingo', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
-    cy.contains('Añadir').click()
+    cy.contains(/^Añadir$/).click()
     cy.get('[placeholder="Nombre del usuario..."]').type('Bob')
-    cy.contains('Añadir').click()
+    cy.contains(/^Añadir$/).click()
 
     cy.contains('Alice').parent().contains('X').click()
     cy.contains('Alice').should('not.exist')
@@ -77,9 +77,9 @@ describe('Bingo', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
     cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
-    cy.contains('Añadir').click()
+    cy.contains(/^Añadir$/).click()
     cy.get('[placeholder="Nombre del usuario..."]').type('Bob')
-    cy.contains('Añadir').click()
+    cy.contains(/^Añadir$/).click()
 
     cy.contains('Eliminar todos').click()
 
