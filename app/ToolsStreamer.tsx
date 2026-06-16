@@ -207,10 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(197, 165, 130, 0.15)',
-    shadowColor: '#C5A582',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    boxShadow: '0 8px 12px rgba(197,165,130,0.1)',
     elevation: 4,
   },
 

@@ -623,8 +623,6 @@ const styles = StyleSheet.create({
   subCard: {
     borderWidth: 3,
     borderColor: "#FFD700",
-    shadowColor: "#FFD700",
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
+    boxShadow: '0 0 6px rgba(255,215,0,0.8)',
   },
 });

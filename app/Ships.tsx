@@ -10,6 +10,7 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  TextStyle,
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -726,10 +727,8 @@ const styles = StyleSheet.create({
   shipName: {
     fontSize: 16,
     fontWeight: "900",
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
+    textShadow: '0 1px 3px #000',
+  } as TextStyle,
   hpBG: { height: 4, width: 35, backgroundColor: "#333" },
   hpFill: { height: "100%" },
   bullet: {
