@@ -44,3 +44,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Cypress artifacts
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/

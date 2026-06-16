@@ -14,7 +14,9 @@
     "deploy": "gh-pages -d dist",
     "test": "jest",
     "test:watch": "jest --watch",
-    "deploy:web": "expo export --platform web --output-dir docs"
+    "deploy:web": "expo export --platform web --output-dir docs",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -53,6 +55,7 @@
     "@testing-library/react-native": "^14.0.0",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
+    "cypress": "^15.17.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "gh-pages": "^6.3.0",
