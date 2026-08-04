@@ -1,14 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 
 type Props = {
   misses: number;
-  maxMisses?: number;
 };
 
 const PARTS = ["head", "body", "armLeft", "armRight", "legLeft", "legRight"] as const;
 
-export default function HangmanFigure({ misses, maxMisses = 6 }: Props) {
+export default function HangmanFigure({ misses }: Props) {
   const visible = PARTS.filter((_, i) => i < misses);
 
   return (
@@ -25,9 +24,6 @@ export default function HangmanFigure({ misses, maxMisses = 6 }: Props) {
         {visible.includes("legLeft") && <View style={styles.legLeft} />}
         {visible.includes("legRight") && <View style={styles.legRight} />}
       </View>
-      <Text style={styles.counter}>
-        FALLOS {misses}/{maxMisses}
-      </Text>
     </View>
   );
 }
@@ -144,12 +140,5 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: "#c94b4b",
     transform: [{ rotate: "-45deg" }],
-  },
-
-  counter: {
-    marginTop: 6,
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#c94b4b",
   },
 });

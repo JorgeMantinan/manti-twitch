@@ -19,7 +19,6 @@ import { charStates } from "../utils/ahorcado";
 import AhorcadoStartModal from "../components/AhorcadoStartModal";
 import BingoWinModal from "../components/BingoWinModal";
 import HangmanFigure from "../components/HangmanFigure";
-import { API_CONFIG } from "../constants/api";
 
 type Role = "viewer" | "mod" | "streamer";
 
@@ -42,7 +41,6 @@ export default function Ahorcado() {
   const [drawn, setDrawn] = useState<string[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
   const [misses, setMisses] = useState(0);
-  const maxMisses = 6;
   const maxPlayerMisses = 6;
 
   const [modalVisible, setModalVisible] = useState(true);
@@ -59,7 +57,11 @@ export default function Ahorcado() {
   const socketRef = useRef<Socket | null>(null);
 
   const getToken = async () => {
-    return await SecureStore.getItemAsync("userToken");
+    try {
+      return await SecureStore.getItemAsync("userToken");
+    } catch {
+      return null;
+    }
   };
 
   /*
@@ -107,10 +109,6 @@ JOIN ROOM
       if (!p) return;
 
       setPlayers((prev) => {
-        if (p.misses >= maxPlayerMisses) {
-          return prev.filter((x) => x.name !== p.name);
-        }
-
         const exists = prev.some((x) => x.name === p.name);
         if (exists) {
           return prev.map((x) => (x.name === p.name ? { name: p.name, misses: p.misses } : x));
@@ -128,7 +126,7 @@ JOIN ROOM
 
     socketRef.current.on("ahorcado:guessed", (data: any) => {
       setWinTitle("¡FRASE ACERTADA!");
-      setWinPlayer(`El usuario ${data.player} acertó la frase`);
+      setWinPlayer(`El usuario ${data.player} acertó la frase: "${data.phrase}"`);
       setWinVisible(true);
       stopAuto();
     });
@@ -190,21 +188,6 @@ START
 =====================
 */
 
-  async function resolveChannel() {
-    try {
-      const token = await getToken();
-      if (!token) return undefined;
-
-      const res = await fetch(API_CONFIG.ENDPOINTS.AHORCADO_CHANNEL, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      return data.channel || undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
   async function startGame() {
     stopAuto();
 
@@ -214,16 +197,13 @@ START
     setPlayers([]);
     setWinVisible(false);
 
-    let twitchChannel = streamer?.trim() || undefined;
-
-    if (!twitchChannel && role === "streamer") {
-      twitchChannel = await resolveChannel();
-    }
+    const token = await getToken();
 
     socketRef.current?.emit("ahorcado:start", {
       streamer: streamerRef.current,
-      twitchChannel,
+      twitchChannel: streamer?.trim() || undefined,
       subsOnly,
+      token: token || undefined,
     });
   }
 
@@ -321,18 +301,24 @@ DRAW
         <Text style={styles.bigText}>{current}</Text>
       </Animated.View>
 
-      <HangmanFigure misses={misses} maxMisses={maxMisses} />
+      <HangmanFigure misses={misses} />
 
       {players.length > 0 && (
         <View style={styles.playersRow}>
-          {players.map((p) => (
-            <View key={p.name} style={styles.playerChip}>
-              <Text style={styles.playerName}>{p.name}</Text>
-              <Text style={styles.playerMisses}>
-                FALLOS {p.misses}/{maxPlayerMisses}
-              </Text>
-            </View>
-          ))}
+          {players.map((p) => {
+            const eliminated = p.misses >= maxPlayerMisses;
+            return (
+              <View
+                key={p.name}
+                style={[styles.playerChip, eliminated && styles.playerChipEliminated]}
+              >
+                <Text style={styles.playerName}>{p.name}</Text>
+                <Text style={styles.playerMisses}>
+                  FALLOS {p.misses}/{maxPlayerMisses}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -530,6 +516,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 4,
     paddingHorizontal: 12,
+  },
+
+  playerChipEliminated: {
+    borderWidth: 4,
+    borderColor: "#c94b4b",
   },
 
   playerName: {
