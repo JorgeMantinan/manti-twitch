@@ -10,6 +10,8 @@ import {
 
 import { io, Socket } from "socket.io-client";
 
+import * as SecureStore from "expo-secure-store";
+
 import { useLocalSearchParams } from "expo-router";
 
 import { getSessionId } from "../utils/session";
@@ -17,6 +19,7 @@ import { charStates } from "../utils/ahorcado";
 import AhorcadoStartModal from "../components/AhorcadoStartModal";
 import BingoWinModal from "../components/BingoWinModal";
 import HangmanFigure from "../components/HangmanFigure";
+import { API_CONFIG } from "../constants/api";
 
 type Role = "viewer" | "mod" | "streamer";
 
@@ -54,6 +57,10 @@ export default function Ahorcado() {
 
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  const getToken = async () => {
+    return await SecureStore.getItemAsync("userToken");
+  };
 
   /*
 =====================
@@ -114,13 +121,6 @@ JOIN ROOM
 
     socketRef.current.on("ahorcado:win", (data: any) => {
       setWinTitle("¡FRASE COMPLETADA!");
-      setWinPlayer(data.phrase);
-      setWinVisible(true);
-      stopAuto();
-    });
-
-    socketRef.current.on("ahorcado:lost", (data: any) => {
-      setWinTitle("AHORCADO");
       setWinPlayer(data.phrase);
       setWinVisible(true);
       stopAuto();
@@ -190,7 +190,22 @@ START
 =====================
 */
 
-  function startGame() {
+  async function resolveChannel() {
+    try {
+      const token = await getToken();
+      if (!token) return undefined;
+
+      const res = await fetch(API_CONFIG.ENDPOINTS.AHORCADO_CHANNEL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      return data.channel || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function startGame() {
     stopAuto();
 
     setDrawn([]);
@@ -199,9 +214,15 @@ START
     setPlayers([]);
     setWinVisible(false);
 
+    let twitchChannel = streamer?.trim() || undefined;
+
+    if (!twitchChannel && role === "streamer") {
+      twitchChannel = await resolveChannel();
+    }
+
     socketRef.current?.emit("ahorcado:start", {
       streamer: streamerRef.current,
-      twitchChannel: streamer?.trim() || undefined,
+      twitchChannel,
       subsOnly,
     });
   }
