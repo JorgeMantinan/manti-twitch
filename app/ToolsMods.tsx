@@ -54,6 +54,7 @@ const MOD_TOOLS = [
   {id: '2',title: 'Ruleta',route: '/SmartRoulette',icon: 'clover'},
   {id: '3',title: 'Juego de Barcos', route: '/Ships', icon: 'ship-wheel'},
   {id: '4',title: 'BINGO', route: '/Bingo', icon: 'alpha-b-circle-outline'},
+  {id: '5',title: 'AHORCADO', route: '/Ahorcado', icon: 'alpha-h-circle-outline'},
 ];
 
 export default function ToolsMods() {

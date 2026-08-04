@@ -42,10 +42,11 @@ const STREAMER_TOOLS = [
     { id: '1', title: 'Ruleta', route: '/SmartRoulette', icon: 'clover' },
     { id: '2', title: 'Juego de Barcos', route: '/Ships', icon: 'ship-wheel'},
     { id: '3', title: 'BINGO', route: '/Bingo', icon: 'alpha-b-circle-outline'},
-    // { id: '4', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
-    // { id: '5', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
-    // { id: '6', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
-    { id: '7', title: 'Suscriptores actuales', route: '/MySubs', icon: 'account-star' },
+    { id: '4', title: 'AHORCADO', route: '/Ahorcado', icon: 'alpha-h-circle-outline'},
+    // { id: '5', title: 'Hundir la Flota', route: '/Streamer/Battleship', icon: 'target' },
+    // { id: '6', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
+    // { id: '7', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
+    { id: '8', title: 'Suscriptores actuales', route: '/MySubs', icon: 'account-star' },
 ];
 
 export default function ToolsStreamer() {

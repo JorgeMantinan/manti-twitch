@@ -17,5 +17,8 @@ export const API_CONFIG = {
     RAFFLE_START: `${BASE_URL}/api/raffle/start`,
     RAFFLE_STOP: `${BASE_URL}/api/raffle/stop`,
     PICK_WINNER: `${BASE_URL}/api/raffle/pick-winner`,
+    
+    // Ahorcado
+    AHORCADO_PHRASES: `${BASE_URL}/api/ahorcado/phrases`,
   }
 };
