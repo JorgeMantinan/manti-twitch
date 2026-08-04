@@ -6,26 +6,23 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
-  Platform,
 } from "react-native";
 
 import { io, Socket } from "socket.io-client";
 
-import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams } from "expo-router";
 
 import { getSessionId } from "../utils/session";
 import { charStates } from "../utils/ahorcado";
-import ParticipantsModal from "../components/BingoParticipantsModal";
+import AhorcadoStartModal from "../components/AhorcadoStartModal";
 import BingoWinModal from "../components/BingoWinModal";
 import HangmanFigure from "../components/HangmanFigure";
-import { API_CONFIG } from '../constants/api';
 
 type Role = "viewer" | "mod" | "streamer";
 
-type Participant = {
+type Player = {
   name: string;
-  isSub?: boolean;
+  misses: number;
 };
 
 export default function Ahorcado() {
@@ -34,16 +31,16 @@ export default function Ahorcado() {
   const role: Role = (params.role as Role) || "viewer";
   const [streamer, setStreamer] = useState((params.streamer as string) || "");
   const streamerRef = useRef("default");
-  const [raffleWord, setRaffleWord] = useState("!sorteo");
-  const [raffleRunning, setRaffleRunning] = useState(false);
+  const [subsOnly, setSubsOnly] = useState(false);
 
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
 
   const [phrase, setPhrase] = useState<string | null>(null);
   const [drawn, setDrawn] = useState<string[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
   const [misses, setMisses] = useState(0);
   const maxMisses = 6;
+  const maxPlayerMisses = 6;
 
   const [modalVisible, setModalVisible] = useState(true);
 
@@ -57,11 +54,6 @@ export default function Ahorcado() {
 
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketRef = useRef<Socket | null>(null);
-
-  const getToken = async () => {
-    if (Platform.OS === "web") return localStorage.getItem("userToken");
-    return await SecureStore.getItemAsync("userToken");
-  };
 
   /*
 =====================
@@ -86,30 +78,12 @@ JOIN ROOM
       });
     });
 
-    socketRef.current.on("newParticipant", (data: any) => {
-      setParticipants((prev) => {
-        const exists = prev.some(
-          (p) =>
-            p.name.toLowerCase() === data.participant.username.toLowerCase(),
-        );
-
-        if (exists) return prev;
-
-        return [
-          ...prev,
-          {
-            name: data.participant.username,
-            isSub: data.participant.isSub || false,
-          },
-        ];
-      });
-    });
-
     socketRef.current.on("ahorcado:started", (data: any) => {
       setPhrase(data.phrase);
       setDrawn([]);
       setCurrent(null);
       setMisses(0);
+      setPlayers([]);
       setWinVisible(false);
     });
 
@@ -119,6 +93,23 @@ JOIN ROOM
       setMisses(data.misses);
       animateLetter();
       speakLetter(data.letter);
+    });
+
+    socketRef.current.on("ahorcado:playerMiss", (data: any) => {
+      const p = data.player;
+      if (!p) return;
+
+      setPlayers((prev) => {
+        if (p.misses >= maxPlayerMisses) {
+          return prev.filter((x) => x.name !== p.name);
+        }
+
+        const exists = prev.some((x) => x.name === p.name);
+        if (exists) {
+          return prev.map((x) => (x.name === p.name ? { name: p.name, misses: p.misses } : x));
+        }
+        return [...prev, { name: p.name, misses: p.misses }];
+      });
     });
 
     socketRef.current.on("ahorcado:win", (data: any) => {
@@ -160,116 +151,6 @@ CLEAN INTERVAL ON CHANGE STREAMER
       }
     };
   }, []);
-
-  /*
-=====================
-RAFFLE
-=====================
-*/
-  const startRaffle = async () => {
-    if (role === "viewer") return;
-
-    const token = await getToken();
-
-    await fetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        keyword: raffleWord,
-        game: "ahorcado",
-        streamer: streamerRef.current,
-        twitchChannel: streamer,
-      }),
-    });
-
-    setRaffleRunning(true);
-  };
-
-  const stopRaffle = async () => {
-    const token = await getToken();
-
-    const res = await fetch(
-      API_CONFIG.ENDPOINTS.RAFFLE_STOP,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-
-    const data = await res.json();
-
-    const parsed: Participant[] = data.data.map((p: any) => ({
-      name: p.username,
-      isSub: p.isSub,
-    }));
-
-    setParticipants((prev) => {
-      const map = new Map();
-
-      prev.forEach((p) => {
-        map.set(p.name.toLowerCase(), p);
-      });
-
-      parsed.forEach((p: Participant) => {
-        const existing = map.get(p.name.toLowerCase());
-
-        if (existing) {
-          if (p.isSub) {
-            existing.isSub = true;
-          }
-        } else {
-          map.set(p.name.toLowerCase(), p);
-        }
-      });
-
-      return Array.from(map.values());
-    });
-
-    setRaffleRunning(false);
-  };
-
-  /*
-=====================
-GET SUBS
-=====================
-*/
-
-  const fetchSubs = async () => {
-    if (role !== "streamer") return;
-
-    const token = await getToken();
-
-    const res = await fetch(
-      API_CONFIG.ENDPOINTS.SUBS,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-
-    const data = await res.json();
-
-    const parsed = data.subscribers.map((s: any) => ({
-      name: s.user_name,
-      isSub: true,
-    }));
-
-    setParticipants((prev) => {
-      const existing = new Set(prev.map((p) => p.name.toLowerCase()));
-
-      const newOnes = parsed.filter(
-        (p: any) => !existing.has(p.name.toLowerCase()),
-      );
-
-      return [...prev, ...newOnes];
-    });
-  };
 
   /*
 =====================
@@ -315,11 +196,13 @@ START
     setDrawn([]);
     setCurrent(null);
     setMisses(0);
+    setPlayers([]);
     setWinVisible(false);
 
     socketRef.current?.emit("ahorcado:start", {
       streamer: streamerRef.current,
       twitchChannel: streamer?.trim() || undefined,
+      subsOnly,
     });
   }
 
@@ -389,21 +272,14 @@ DRAW
 
   return (
     <View style={styles.container}>
-      <ParticipantsModal
+      <AhorcadoStartModal
         visible={modalVisible}
-        participants={participants}
-        setParticipants={setParticipants}
         role={role}
         streamer={streamer}
         setStreamer={setStreamer}
-        raffleWord={raffleWord}
-        setRaffleWord={setRaffleWord}
-        raffleRunning={raffleRunning}
-        startRaffle={startRaffle}
-        stopRaffle={stopRaffle}
-        fetchSubs={fetchSubs}
+        subsOnly={subsOnly}
+        setSubsOnly={setSubsOnly}
         onStart={() => {
-          setRaffleRunning(false);
           setModalVisible(false);
           startGame();
         }}
@@ -425,6 +301,19 @@ DRAW
       </Animated.View>
 
       <HangmanFigure misses={misses} maxMisses={maxMisses} />
+
+      {players.length > 0 && (
+        <View style={styles.playersRow}>
+          {players.map((p) => (
+            <View key={p.name} style={styles.playerChip}>
+              <Text style={styles.playerName}>{p.name}</Text>
+              <Text style={styles.playerMisses}>
+                FALLOS {p.misses}/{maxPlayerMisses}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {phrase && (
         <View style={styles.phraseRow}>
@@ -598,6 +487,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
+  },
+
+  playersRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 8,
+    paddingHorizontal: 10,
+    gap: 8,
+  },
+
+  playerChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#C5A582",
+    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+
+  playerName: {
+    fontWeight: "bold",
+    fontSize: 13,
+    color: "#2A2A2A",
+  },
+
+  playerMisses: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#c94b4b",
   },
 
   drawButton: {
