@@ -45,9 +45,6 @@ export default function Ahorcado() {
   const [misses, setMisses] = useState(0);
   const maxMisses = 6;
 
-  const [phrases, setPhrases] = useState<string[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
   const [modalVisible, setModalVisible] = useState(true);
 
   const letterScale = useRef(new Animated.Value(0)).current;
@@ -64,32 +61,6 @@ export default function Ahorcado() {
   const getToken = async () => {
     if (Platform.OS === "web") return localStorage.getItem("userToken");
     return await SecureStore.getItemAsync("userToken");
-  };
-
-  /*
-=====================
-FETCH PHRASES
-=====================
-*/
-  const fetchPhrases = async () => {
-    const token = await getToken();
-    if (!token) return;
-
-    try {
-      const res = await fetch(API_CONFIG.ENDPOINTS.AHORCADO_PHRASES, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
-
-      if (Array.isArray(data.phrases)) {
-        setPhrases(data.phrases);
-      }
-    } catch (err) {
-      console.error("Error fetching phrases", err);
-    }
   };
 
   /*
@@ -154,12 +125,21 @@ JOIN ROOM
       setWinTitle("¡FRASE COMPLETADA!");
       setWinPlayer(data.phrase);
       setWinVisible(true);
+      stopAuto();
     });
 
     socketRef.current.on("ahorcado:lost", (data: any) => {
       setWinTitle("AHORCADO");
       setWinPlayer(data.phrase);
       setWinVisible(true);
+      stopAuto();
+    });
+
+    socketRef.current.on("ahorcado:guessed", (data: any) => {
+      setWinTitle("¡FRASE ACERTADA!");
+      setWinPlayer(`El usuario ${data.player} acertó la frase`);
+      setWinVisible(true);
+      stopAuto();
     });
 
     return () => {
@@ -179,10 +159,6 @@ CLEAN INTERVAL ON CHANGE STREAMER
         autoRef.current = null;
       }
     };
-  }, []);
-
-  useEffect(() => {
-    fetchPhrases();
   }, []);
 
   /*
@@ -334,6 +310,8 @@ START
 */
 
   function startGame() {
+    stopAuto();
+
     setDrawn([]);
     setCurrent(null);
     setMisses(0);
@@ -341,7 +319,7 @@ START
 
     socketRef.current?.emit("ahorcado:start", {
       streamer: streamerRef.current,
-      index: selectedIndex ?? undefined,
+      twitchChannel: streamer?.trim() || undefined,
     });
   }
 
@@ -351,12 +329,7 @@ NEW GAME
 =====================
 */
   function newGame() {
-    if (autoRef.current) {
-      clearInterval(autoRef.current);
-      autoRef.current = null;
-    }
-
-    setAuto(false);
+    stopAuto();
 
     setPhrase(null);
     setDrawn([]);
@@ -377,6 +350,15 @@ DRAW
     socketRef.current?.emit("ahorcado:draw", {
       streamer: streamerRef.current,
     });
+  }
+
+  function stopAuto() {
+    if (autoRef.current) {
+      clearInterval(autoRef.current);
+      autoRef.current = null;
+    }
+
+    setAuto(false);
   }
 
   function toggleAuto() {
@@ -401,25 +383,9 @@ DRAW
 
   /*
 =====================
-PHRASE PICKER
+DRAW
 =====================
 */
-
-  function selectPhrase(i: number | null) {
-    setSelectedIndex(i);
-  }
-
-  const activeChip = (() => {
-    if (phrase) {
-      const idx = phrases.findIndex(
-        (p) => p.trim().toLowerCase() === phrase.trim().toLowerCase(),
-      );
-
-      if (idx !== -1) return idx + 1;
-    }
-
-    return selectedIndex == null ? 0 : selectedIndex + 1;
-  })();
 
   return (
     <View style={styles.container}>
@@ -505,44 +471,6 @@ PHRASE PICKER
           </TouchableOpacity>
         </View>
       </View>
-
-      {phrases.length > 0 && (
-        <ScrollView horizontal style={styles.phrasePicker}>
-          <TouchableOpacity
-            style={[styles.phraseChip, activeChip === 0 && styles.phraseChipOn]}
-            onPress={() => selectPhrase(null)}
-          >
-            <Text
-              style={[
-                styles.phraseChipText,
-                activeChip === 0 && styles.phraseChipTextOn,
-              ]}
-            >
-              Aleatoria
-            </Text>
-          </TouchableOpacity>
-
-          {phrases.map((p, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[
-                styles.phraseChip,
-                activeChip === i + 1 && styles.phraseChipOn,
-              ]}
-              onPress={() => selectPhrase(i)}
-            >
-              <Text
-                style={[
-                  styles.phraseChipText,
-                  activeChip === i + 1 && styles.phraseChipTextOn,
-                ]}
-              >
-                {p}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
 
       <BingoWinModal
         visible={winVisible}
@@ -663,35 +591,6 @@ const styles = StyleSheet.create({
 
   tileHidden: {
     color: "#999",
-  },
-
-  phrasePicker: {
-    flexGrow: 0,
-    marginBottom: 20,
-  },
-
-  phraseChip: {
-    borderWidth: 1,
-    borderColor: "#C5A582",
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    marginHorizontal: 4,
-    backgroundColor: "#fff",
-  },
-
-  phraseChipOn: {
-    backgroundColor: "#C5A582",
-  },
-
-  phraseChipText: {
-    color: "#C5A582",
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-
-  phraseChipTextOn: {
-    color: "#fff",
   },
 
   buttonsRow: {
