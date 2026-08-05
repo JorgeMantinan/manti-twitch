@@ -260,7 +260,7 @@ DRAW
           socketRef.current?.emit("ahorcado:draw", {
             streamer: streamerRef.current,
           });
-        }, 2000);
+        }, 6000);
 
         return true;
       }
