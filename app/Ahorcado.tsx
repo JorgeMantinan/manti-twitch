@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Platform,
 } from "react-native";
 
 import { io, Socket } from "socket.io-client";
@@ -58,6 +59,7 @@ export default function Ahorcado() {
 
   const getToken = async () => {
     try {
+      if (Platform.OS === "web") return localStorage.getItem("userToken");
       return await SecureStore.getItemAsync("userToken");
     } catch {
       return null;
