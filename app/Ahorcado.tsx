@@ -17,6 +17,7 @@ import { useLocalSearchParams } from "expo-router";
 
 import { getSessionId } from "../utils/session";
 import { charStates } from "../utils/ahorcado";
+import { getAhorcadoAudio } from "../utils/ahorcadoAudio";
 import AhorcadoStartModal from "../components/AhorcadoStartModal";
 import BingoWinModal from "../components/BingoWinModal";
 import HangmanFigure from "../components/HangmanFigure";
@@ -56,6 +57,33 @@ export default function Ahorcado() {
 
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUriRef = useRef<string | null>(null);
+
+  const resolveUri = (asset: any): string | null => {
+    if (!asset) return null;
+    if (typeof asset === "string") return asset;
+    return asset?.uri ?? null;
+  };
+
+  const playPhraseAudio = (uri: string | null) => {
+    if (!uri || typeof window === "undefined") return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    const el = new Audio(uri);
+    audioRef.current = el;
+    el.play().catch(() => {});
+  };
+
+  const onPhraseGuessed = (phrase: string) => {
+    const uri = resolveUri(getAhorcadoAudio(phrase));
+    audioUriRef.current = uri;
+    playPhraseAudio(uri);
+  };
 
   const getToken = async () => {
     try {
@@ -96,6 +124,7 @@ JOIN ROOM
       setMisses(0);
       setPlayers([]);
       setWinVisible(false);
+      audioUriRef.current = null;
     });
 
     socketRef.current.on("ahorcado:letter", (data: any) => {
@@ -122,6 +151,7 @@ JOIN ROOM
     socketRef.current.on("ahorcado:win", (data: any) => {
       setWinTitle("¡FRASE COMPLETADA!");
       setWinPlayer(data.phrase);
+      audioUriRef.current = null;
       setWinVisible(true);
       stopAuto();
     });
@@ -129,12 +159,17 @@ JOIN ROOM
     socketRef.current.on("ahorcado:guessed", (data: any) => {
       setWinTitle("¡FRASE ACERTADA!");
       setWinPlayer(`El usuario ${data.player} acertó la frase: "${data.phrase}"`);
+      onPhraseGuessed(data.phrase);
       setWinVisible(true);
       stopAuto();
     });
 
     return () => {
       socketRef.current?.disconnect();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     };
   }, []);
 
@@ -375,6 +410,7 @@ DRAW
         title={winTitle}
         player={winPlayer}
         onClose={() => setWinVisible(false)}
+        onReplay={audioUriRef.current ? () => playPhraseAudio(audioUriRef.current) : undefined}
       />
     </View>
   );

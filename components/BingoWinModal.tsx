@@ -6,6 +6,7 @@ type Props = {
   title: string;
   player: string;
   onClose: () => void;
+  onReplay?: () => void;
 };
 
 export default function BingoWinModal({
@@ -13,6 +14,7 @@ export default function BingoWinModal({
   title,
   player,
   onClose,
+  onReplay,
 }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -22,9 +24,17 @@ export default function BingoWinModal({
 
           <Text style={styles.player}>{player}</Text>
 
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={{ color: "#fff" }}>Cerrar</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            {onReplay && (
+              <TouchableOpacity style={styles.button} onPress={onReplay}>
+                <Text style={{ color: "#fff" }}>Reproducir audio</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.button} onPress={onClose}>
+              <Text style={{ color: "#fff" }}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -59,5 +69,10 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: "#C5A582",
     padding: 12,
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
   },
 });
