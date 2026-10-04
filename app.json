@@ -24,7 +24,6 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "baseUrl": "/manti-twitch",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -46,8 +45,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true,
-      "baseUrl": "/manti-twitch"
+      "reactCompiler": true
     }
   }
 }
