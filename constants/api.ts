@@ -6,6 +6,8 @@ export const API_CONFIG = {
   ENDPOINTS: {
     // Auth
     AUTH_TWITCH: `${BASE_URL}/auth/twitch`,
+    AUTH_REFRESH: `${BASE_URL}/auth/refresh`,
+    AUTH_EXCHANGE: `${BASE_URL}/auth/exchange`,
     
     // Twitch Data
     SUBS: `${BASE_URL}/api/twitch/subs`,

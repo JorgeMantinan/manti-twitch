@@ -13,9 +13,14 @@ import {
   Dimensions
 } from 'react-native';
 import { useRouter, RelativePathString } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from "jwt-decode";
 import { API_CONFIG } from '../constants/api';
+import {
+  exchangeCode,
+  getStoredToken,
+  saveStoredToken,
+  clearStoredToken,
+} from '../services/auth';
 
 export default function App() {
 
@@ -25,32 +30,13 @@ export default function App() {
   const [isLogged, setIsLogged] = useState(false);
   const [scopes, setScopes] = useState<string[]>([]);
 
-  const getToken = async () => {
-    if (Platform.OS === "web") {
-      return localStorage.getItem("userToken");
-    } else {
-      return await SecureStore.getItemAsync("userToken");
-    }
-  };
-
-  /* ========================== */
   const saveToken = async (token: string) => {
-    if (Platform.OS === "web") {
-      localStorage.setItem("userToken", token);
-    } else {
-      await SecureStore.setItemAsync("userToken", token);
-    }
-
+    await saveStoredToken(token);
     setIsLogged(true);
   };
 
   const resetToken = async () => {
-    if (Platform.OS === "web") {
-      localStorage.removeItem("userToken");
-    } else {
-      await SecureStore.deleteItemAsync("userToken");
-    }
-
+    await clearStoredToken();
     setIsLogged(false);
 
     if (Platform.OS === "web") {
@@ -74,15 +60,29 @@ export default function App() {
   /* ========================== */
   useEffect(() => {
   const handleLogin = async () => {
-    if (Platform.OS === "web") {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get("token");
+    if (Platform.OS !== "web") return;
 
-      if (token) {
-        await saveToken(token);
-        await validateToken(token);
-        router.replace("/" as RelativePathString);
-      }
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const legacyToken = params.get("token");
+
+    let token: string | null = null;
+
+    if (code) {
+      token = await exchangeCode(code);
+      if (!token) alert("No se pudo iniciar la sesión. Inténtalo de nuevo.");
+    } else if (legacyToken) {
+      token = legacyToken;
+    }
+
+    if (code || legacyToken) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    if (token) {
+      await saveToken(token);
+      await validateToken(token);
+      router.replace("/" as RelativePathString);
     }
   };
 
@@ -92,13 +92,7 @@ export default function App() {
   /* ========================== */
   useEffect(() => {
     const loadStoredToken = async () => {
-      let storedToken;
-
-      if (Platform.OS === "web") {
-        storedToken = localStorage.getItem("userToken");
-      } else {
-        storedToken = await SecureStore.getItemAsync("userToken");
-      }
+      const storedToken = await getStoredToken();
 
       if (storedToken) {
         setIsLogged(true);
@@ -187,14 +181,16 @@ export default function App() {
                   </TouchableOpacity>
                 )}
 
-                <TouchableOpacity
-                  style={styles.resetButton}
-                  onPress={resetToken}
-                >
-                  <Text style={styles.resetButtonText}>
-                    Reset login
-                  </Text>
-                </TouchableOpacity>
+                {isLogged && (
+                  <TouchableOpacity
+                    style={styles.resetButton}
+                    onPress={resetToken}
+                  >
+                    <Text style={styles.resetButtonText}>
+                      Cerrar sesión
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>

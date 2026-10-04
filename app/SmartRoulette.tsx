@@ -105,6 +105,7 @@ TOKEN
     const socket = io("https://manti-twitch-backend.onrender.com", {
       reconnection: false,
       timeout: 5000,
+      auth: (cb) => getToken().then((token) => cb(token ? { token } : {})),
     });
     socketRef.current = socket;
 
