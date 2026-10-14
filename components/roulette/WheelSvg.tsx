@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import Svg, {
   Circle,
   ClipPath,
@@ -43,7 +43,7 @@ type Props = {
   dark: boolean;
 };
 
-export default function WheelSvg({ slices, winner, size, dark }: Props) {
+export default memo(function WheelSvg({ slices, winner, size, dark }: Props) {
   const center = size / 2;
   const radius = center - 24;
   const palette = dark ? DARK_SLICES : LIGHT_SLICES;
@@ -199,4 +199,4 @@ Z
       />
     </Svg>
   );
-}
+});

@@ -465,12 +465,13 @@ export default function SmartRoulette() {
           duration: 90,
           easing: Easing.linear,
           useNativeDriver: true,
+          isInteraction: false,
         }).start();
       }
     };
 
-    spinAnim.addListener(onFrame);
-    return () => spinAnim.removeListener(onFrame);
+    const listenerId = spinAnim.addListener(onFrame);
+    return () => spinAnim.removeListener(listenerId);
   }, []);
 
   /*
@@ -522,7 +523,13 @@ export default function SmartRoulette() {
   };
 
   const [visualSlices, setVisualSlices] = useState<Participant[]>([]);
+  const slicesDirtyRef = useRef(false);
   useEffect(() => {
+    if (spinning) {
+      slicesDirtyRef.current = true;
+      return;
+    }
+    slicesDirtyRef.current = false;
     setVisualSlices(buildVisualFrom(basePool()));
   }, [participants, duelOn, duelA, duelB, filterMode, followerSet, antiRepeat]);
 
@@ -532,13 +539,15 @@ export default function SmartRoulette() {
 
   const anonMap = useMemo(() => {
     if (!anonOn) return {};
-    const shuffled = [...participants].sort(() => Math.random() - 0.5);
+    const sorted = participants
+      .map((p) => p.username)
+      .sort((a, b) => a.localeCompare(b));
     const m: Record<string, string> = {};
-    shuffled.forEach((p, i) => {
-      m[p.username] = `Jugador ${i + 1}`;
+    sorted.forEach((name, i) => {
+      m[name] = `Jugador ${i + 1}`;
     });
     return m;
-  }, [anonOn, participants.length]);
+  }, [anonOn, participants]);
 
   const labelFor = (username: string) => anonMap[username] || username;
 
@@ -546,21 +555,25 @@ export default function SmartRoulette() {
   AVATARS
   */
 
+  const avatarLoginsKey = useMemo(
+    () =>
+      Array.from(new Set(participants.map((p) => p.username))).sort().join(","),
+    [participants],
+  );
+
   useEffect(() => {
     if (Platform.OS !== "web") return;
     let alive = true;
     const timer = setTimeout(async () => {
       const token = await getToken();
-      if (!token || !participants.length) {
+      const logins = avatarLoginsKey ? avatarLoginsKey.split(",") : [];
+      if (!token || !logins.length) {
         if (alive) setAvatars({});
         return;
       }
-      const logins = Array.from(
-        new Set(participants.map((p) => p.username)),
-      ).slice(0, 100);
       try {
         const res = await fetch(
-          `${API_CONFIG.ENDPOINTS.AVATARS}?logins=${encodeURIComponent(logins.join(","))}`,
+          `${API_CONFIG.ENDPOINTS.AVATARS}?logins=${encodeURIComponent(logins.slice(0, 100).join(","))}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (!res.ok) return;
@@ -572,7 +585,7 @@ export default function SmartRoulette() {
       alive = false;
       clearTimeout(timer);
     };
-  }, [participants]);
+  }, [avatarLoginsKey]);
 
   /*
   FOLLOWERS FILTER
@@ -978,6 +991,10 @@ export default function SmartRoulette() {
           at: Date.now(),
         },
       ]);
+      if (slicesDirtyRef.current) {
+        slicesDirtyRef.current = false;
+        setVisualSlices(buildVisualFrom(basePool()));
+      }
       pushLog(`Ganó ${winnerName}`);
 
       if (announceOn && role !== "viewer" && socketRef.current) {
@@ -1209,11 +1226,15 @@ export default function SmartRoulette() {
     );
   })();
 
-  const wheelSlices: WheelSlice[] = visualSlices.map((p) => ({
-    label: labelFor(p.username),
-    real: p.username,
-    avatar: avatars[p.username],
-  }));
+  const wheelSlices: WheelSlice[] = useMemo(
+    () =>
+      visualSlices.map((p) => ({
+        label: labelFor(p.username),
+        real: p.username,
+        avatar: avatars[p.username],
+      })),
+    [visualSlices, anonMap, avatars],
+  );
 
   /*
   RENDER BLOCKS
