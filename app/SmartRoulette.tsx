@@ -223,29 +223,9 @@ SOUND
 FIREWORKS
 */
 
-  const showFireworks = () => {
-    if (Platform.OS !== "web") return;
-
-    const container = document.createElement("div");
-
-    container.style.position = "fixed";
-    container.style.left = "50%";
-    container.style.top = "40%";
-    container.style.transform = "translateX(-50%)";
-    container.style.fontSize = "60px";
-    container.style.zIndex = "9999";
-    container.textContent = "🎆🎉🎆";
-
-    document.body.appendChild(container);
-
-    setTimeout(() => {
-      document.body.removeChild(container);
-    }, 3000);
-  };
-
   /*
-PARTICIPANTS
-*/
+  PARTICIPANTS
+  */
 
   const addParticipant = () => {
     if (!newUser.trim()) return;
@@ -280,10 +260,12 @@ ANIMATION
 
     const centerOfSlice = winnerIndex * slice + slice / 2;
 
-    const targetAngle = 360 - centerOfSlice;
+    // The pointer sits at the top (270° in SVG coords: 0° = right, y down)
+    const targetAngle = (((270 - centerOfSlice) % 360) + 360) % 360;
 
     const spins = 6;
 
+    setWinner(null);
     spinAnim.setValue(0);
 
     Animated.timing(spinAnim, {
@@ -293,7 +275,6 @@ ANIMATION
       useNativeDriver: true,
     }).start(() => {
       setWinner(winnerName);
-      showFireworks();
     });
   };
 
@@ -485,8 +466,10 @@ Z
               fontSize={
                 visual.length > 60 ? "10" : visual.length > 25 ? "14" : "17"
               }
+              fontFamily='"Trebuchet MS", "Segoe UI", Tahoma, sans-serif'
               fill={isWinner ? "#3A2F26" : palette.text}
-              fontWeight="600"
+              fontWeight="700"
+              letterSpacing="0.5"
               textAnchor="middle"
               alignmentBaseline="middle"
               rotation={textAngle}
@@ -726,6 +709,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     paddingHorizontal: 6,
+    fontFamily: '"Trebuchet MS", "Segoe UI", Tahoma, sans-serif',
+    letterSpacing: 0.5,
   },
 
   subsButton: {
