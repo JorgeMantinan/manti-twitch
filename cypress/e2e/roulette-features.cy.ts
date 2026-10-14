@@ -13,11 +13,18 @@ describe('Roulette new features', () => {
       `/SmartRoulette?role=mod&data=${data(['Alice', 'Bob', 'Carol'])}&drawMode=prizes&spins=3`,
       { timeout: 15000 },
     );
-    cy.contains('Participants (3)').should('be.visible');
+    cy.contains('Participants (3)')
+      .scrollIntoView()
+      .should('be.visible');
     cy.wait(1200);
+
+    cy.get('[placeholder="Premios (uno por línea)"]').type(
+      'Sub 1 mes{enter}Bollo de pan{enter}Sub 2 meses',
+    );
 
     cy.contains('GIRAR RULETA', { scrollBehavior: false }).click({ scrollBehavior: false });
     cy.contains('🏆', { timeout: 15000, scrollBehavior: false }).should('be.visible');
+    cy.contains('🎁 Sub 1 mes').should('be.visible');
     cy.contains('Participants (2)').should('be.visible');
 
     cy.contains('GIRAR RULETA', { scrollBehavior: false }).click({ scrollBehavior: false });
@@ -30,6 +37,7 @@ describe('Roulette new features', () => {
 
     cy.contains('¡PREMIOS AGOTADOS!').scrollIntoView().should('be.visible');
     cy.contains('Historial').scrollIntoView().should('be.visible');
+    cy.contains('— Sub 1 mes').scrollIntoView().should('be.visible');
     cy.screenshot('prizes-done');
   });
 

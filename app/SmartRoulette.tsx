@@ -74,6 +74,7 @@ type Prefs = {
   drawMode?: DrawMode;
   prizesMax?: number;
   filterMode?: FilterMode;
+  prizeTexts?: string[];
 };
 
 function readStorage<T>(key: string, fallback: T): T {
@@ -128,11 +129,13 @@ export default function SmartRoulette() {
     filterMode: "filter",
     antiRepeat: "anti",
     countdownSec: "countdown",
+    prizeTexts: "prize",
   };
   const pref = <K extends keyof Prefs>(key: K, fallback: Prefs[K]): Prefs[K] => {
     const aliased = URL_ALIASES[String(key)];
     const urlVal = qp(params, String(key)) || (aliased ? qp(params, aliased) : "");
     if (urlVal !== "") {
+      if (key === "prizeTexts") return urlVal.split("|") as Prefs[K];
       if (key === "spins") return Math.min(12, Math.max(3, Number(urlVal) || (fallback as number))) as Prefs[K];
       if (key === "antiRepeat") return ([0, 2, 5, 10].includes(Number(urlVal)) ? Number(urlVal) : fallback) as Prefs[K];
       if (key === "countdownSec") return (COUNTDOWN_CYCLE.includes(Number(urlVal)) ? Number(urlVal) : fallback) as Prefs[K];
@@ -198,6 +201,10 @@ export default function SmartRoulette() {
   const soundOnRef = useRef(soundOn);
   const [spinning, setSpinning] = useState(false);
   const [prizesMax, setPrizesMax] = useState<number>(() => Number(pref("prizesMax", 3)));
+  const [prizeTexts, setPrizeTexts] = useState<string[]>(() => {
+    const v = pref("prizeTexts", [] as string[]);
+    return Array.isArray(v) ? v : [];
+  });
   const [antiRepeat, setAntiRepeat] = useState<number>(() => Number(pref("antiRepeat", 0)));
   const [duelOn, setDuelOn] = useState(false);
   const [duelA, setDuelA] = useState("");
@@ -266,6 +273,7 @@ export default function SmartRoulette() {
       drawMode,
       prizesMax,
       filterMode,
+      prizeTexts,
     } satisfies Prefs);
   }, [
     spins,
@@ -279,6 +287,7 @@ export default function SmartRoulette() {
     drawMode,
     prizesMax,
     filterMode,
+    prizeTexts,
   ]);
 
   // Session restore prompt (only when not coming from ?data)
@@ -854,7 +863,10 @@ export default function SmartRoulette() {
   const copyResults = async () => {
     if (Platform.OS !== "web" || !history.length) return;
 
-    const lines = history.map((h, i) => `${i + 1}º ${h.username}`);
+    const lines = history.map((h, i) => {
+      const prize = (prizeTexts[i] || "").trim();
+      return prize ? `${i + 1}º ${h.username} — ${prize}` : `${i + 1}º ${h.username}`;
+    });
 
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -879,8 +891,10 @@ export default function SmartRoulette() {
         `${p.username},${p.weight},${p.isSub ? 1 : 0},${p.gifts || 0},${p.paused ? 1 : 0}`,
       ),
     );
-    lines.push("", "ronda,ganador");
-    history.forEach((h) => lines.push(`${h.round},${h.username}`));
+    lines.push("", "ronda,ganador,premio");
+    history.forEach((h, i) =>
+      lines.push(`${h.round},${h.username},"${(prizeTexts[i] || "").replace(/"/g, '""')}"`),
+    );
 
     const blob = new Blob([lines.join("\n")], {
       type: "text/csv;charset=utf-8",
@@ -999,9 +1013,12 @@ export default function SmartRoulette() {
 
       if (announceOn && role !== "viewer" && socketRef.current) {
         const ch = role === "mod" ? streamer.trim() : undefined;
+        const prize =
+          mode === "prizes" ? (prizeTexts[round] || "").trim() : "";
         socketRef.current.emit("roulette:announce", {
           winner: winnerName,
           channel: ch || undefined,
+          prize: prize || undefined,
         });
       }
 
@@ -1226,6 +1243,8 @@ export default function SmartRoulette() {
     );
   })();
 
+  const prizeForRound = (r: number) => (prizeTexts[r - 1] || "").trim();
+
   const wheelSlices: WheelSlice[] = useMemo(
     () =>
       visualSlices.map((p) => ({
@@ -1275,7 +1294,16 @@ export default function SmartRoulette() {
 
   const winnerBlock = (
     <View style={styles.winnerBox}>
-      {winner ? <Text style={[styles.winner, dark && styles.textLight]}>🏆 {winner}</Text> : null}
+      {winner ? (
+        <>
+          <Text style={[styles.winner, dark && styles.textLight]}>🏆 {winner}</Text>
+          {drawMode === "prizes" && !!prizeForRound(round) && (
+            <Text style={[styles.prizeText, dark && styles.textMuted]}>
+              🎁 {prizeForRound(round)}
+            </Text>
+          )}
+        </>
+      ) : null}
     </View>
   );
 
@@ -1306,6 +1334,8 @@ export default function SmartRoulette() {
                 style={[styles.historyItem, dark && styles.textLight]}
               >
                 {place}º {h.username}
+                {!!prizeTexts[place - 1]?.trim() &&
+                  ` — ${prizeTexts[place - 1].trim()}`}
               </Text>
             );
           })}
@@ -1395,10 +1425,19 @@ export default function SmartRoulette() {
         </View>
 
         {drawMode === "prizes" && (
-          <View style={styles.spinsRow}>
-            <Text style={[styles.spinsLabel, dark && styles.textLight]}>Premios: {prizesMax}</Text>
-            {tinyBtn("−", () => setPrizesMax((s) => Math.max(1, s - 1)))}
-            {tinyBtn("+", () => setPrizesMax((s) => Math.min(10, s + 1)))}
+          <View style={styles.sectionContainer}>
+            <View style={styles.spinsRow}>
+              <Text style={[styles.spinsLabel, dark && styles.textLight]}>Premios: {prizesMax}</Text>
+              {tinyBtn("−", () => setPrizesMax((s) => Math.max(1, s - 1)))}
+              {tinyBtn("+", () => setPrizesMax((s) => Math.min(10, s + 1)))}
+            </View>
+            <TextInput
+              multiline
+              placeholder="Premios (uno por línea)"
+              value={prizeTexts.join("\n")}
+              onChangeText={(t) => setPrizeTexts(t.split(/\r?\n/))}
+              style={[dark ? [styles.input, styles.inputDark] : styles.input, styles.bulkInput]}
+            />
           </View>
         )}
 
@@ -2011,6 +2050,14 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#2A2A2A",
+  },
+
+  prizeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B543F",
+    textAlign: "center",
+    paddingHorizontal: 12,
   },
 
   statusText: {
