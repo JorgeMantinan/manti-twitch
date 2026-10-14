@@ -9,10 +9,10 @@ import {
   ScrollView,
   Animated,
   Easing,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 
-import Svg, { G, Path, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, G, Path, Text as SvgText } from "react-native-svg";
 import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams } from "expo-router";
 import { io } from "socket.io-client";
@@ -35,18 +35,26 @@ interface SocketData {
   totalCount: number;
 }
 
-type Role = "viewer" | "mod" | "streamer";
-
-// Roulette width
-const { width } = Dimensions.get("window");
-const WHEEL_SIZE = Math.min(width * 0.45, 520);
-const CENTER = WHEEL_SIZE / 2;
-const RADIUS = WHEEL_SIZE / 2 - 20;
+// Curated palette matching the site theme (arena / cream / terracotta)
+const SLICE_STYLES = [
+  { fill: "#C5A582", text: "#FFFFFF" },
+  { fill: "#F5EFE7", text: "#5A4632" },
+  { fill: "#CE7B5B", text: "#FFFFFF" },
+  { fill: "#EADCC6", text: "#5A4632" },
+  { fill: "#A9866B", text: "#FFFFFF" },
+  { fill: "#F7F1E8", text: "#5A4632" },
+];
 
 const MAX_SLICES = 120;
 
 export default function SmartRoulette() {
   const params = useLocalSearchParams();
+
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
+  const isNarrow = winWidth < 900;
+  const wheelSize = Math.max(240, Math.min(winWidth - 60, winHeight * 0.55, 480));
+  const wheelCenter = wheelSize / 2;
+  const wheelRadius = wheelCenter - 24;
 
   const socketRef = useRef<any>(null);
 
@@ -223,8 +231,10 @@ FIREWORKS
     container.style.position = "fixed";
     container.style.left = "50%";
     container.style.top = "40%";
+    container.style.transform = "translateX(-50%)";
     container.style.fontSize = "60px";
-    // container.innerHTML = "🎆🎉🎆";
+    container.style.zIndex = "9999";
+    container.textContent = "🎆🎉🎆";
 
     document.body.appendChild(container);
 
@@ -278,8 +288,8 @@ ANIMATION
 
     Animated.timing(spinAnim, {
       toValue: spins + targetAngle / 360,
-      duration: 5000,
-      easing: Easing.out(Easing.cubic),
+      duration: 5500,
+      easing: Easing.bezier(0.12, 0.68, 0.16, 1),
       useNativeDriver: true,
     }).start(() => {
       setWinner(winnerName);
@@ -349,8 +359,45 @@ BACKEND
   };
 
   /*
-PICK WINNER
-*/
+  LOAD SUBSCRIBERS (streamer only)
+  */
+
+  const fetchSubs = async () => {
+    if (role !== "streamer") return;
+
+    const token = await getToken();
+
+    const res = await fetch(API_CONFIG.ENDPOINTS.SUBS, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await res.json();
+
+    if (!Array.isArray(data?.subscribers)) return;
+
+    const parsed: Participant[] = data.subscribers.map((s: any) => ({
+      username: s.user_name || s.username || s.name,
+      weight: 1,
+    }));
+
+    setParticipants((prev) => {
+      const existing = new Set(prev.map((p) => p.username.toLowerCase()));
+
+      const newOnes = parsed.filter(
+        (p) => p.username && !existing.has(p.username.toLowerCase()),
+      );
+
+      return [...prev, ...newOnes];
+    });
+  };
+
+  /*
+  PICK WINNER
+  */
 
   const pickWinner = async () => {
     // Force stop raffle
@@ -393,9 +440,9 @@ RENDER WHEEL
   const renderWheel = () => {
     const visual = visualSlices;
 
-    const radius = RADIUS;
-    const center = CENTER;
-    const slice = 360 / visual.length;
+    const radius = wheelRadius;
+    const center = wheelCenter;
+    const slice = 360 / Math.max(visual.length, 1);
 
     return visual.map((p, i) => {
       const start = i * slice;
@@ -419,18 +466,27 @@ Z
       const tx = center + radius * 0.55 * Math.cos((Math.PI * textAngle) / 180);
       const ty = center + radius * 0.55 * Math.sin((Math.PI * textAngle) / 180);
 
+      const palette = SLICE_STYLES[i % SLICE_STYLES.length];
+      const isWinner = !!winner && p.username === winner;
+
       return (
         <G key={i}>
-          <Path d={path} fill={`hsl(${(i * 23) % 360},70%,55%)`} />
+          <Path
+            d={path}
+            fill={isWinner ? "#FFD700" : palette.fill}
+            stroke="#FFFFFF"
+            strokeWidth={1}
+          />
 
           {visual.length <= 120 && (
             <SvgText
               x={tx}
               y={ty}
               fontSize={
-                visual.length > 60 ? "10" : visual.length > 25 ? "14" : "18"
+                visual.length > 60 ? "10" : visual.length > 25 ? "14" : "17"
               }
-              fill="white"
+              fill={isWinner ? "#3A2F26" : palette.text}
+              fontWeight="600"
               textAnchor="middle"
               alignmentBaseline="middle"
               rotation={textAngle}
@@ -449,36 +505,69 @@ UI
 */
 
   return (
-    <View style={styles.container}>
-      <View style={styles.leftSide}>
+    <View style={isNarrow ? styles.containerNarrow : styles.container}>
+      <View style={isNarrow ? styles.leftSideNarrow : styles.leftSide}>
         <Text style={styles.title}>Smart Twitch Roulette</Text>
 
-        <View style={styles.wheelContainer}>
+        <View
+          style={[styles.wheelContainer, { width: wheelSize, height: wheelSize }]}
+        >
           <Animated.View
             style={{
-              transform: [
-                { rotate: rotation },
-                { perspective: 800 },
-                { rotateX: "10deg" },
-              ],
+              transform: [{ rotate: rotation }, { perspective: 900 }],
             }}
           >
-            <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
+            <Svg width={wheelSize} height={wheelSize}>
+              <Circle
+                cx={wheelCenter}
+                cy={wheelCenter}
+                r={wheelRadius + 16}
+                fill="#EDE4D6"
+              />
               {renderWheel()}
+              <Circle
+                cx={wheelCenter}
+                cy={wheelCenter}
+                r={wheelRadius + 8}
+                fill="none"
+                stroke="#C5A582"
+                strokeWidth={10}
+              />
+              <Circle
+                cx={wheelCenter}
+                cy={wheelCenter}
+                r={68}
+                fill="#FAF7F2"
+                stroke="#C5A582"
+                strokeWidth={4}
+              />
             </Svg>
           </Animated.View>
 
           <View style={styles.pointer} />
+
+          <TouchableOpacity
+            style={styles.hubButton}
+            onPress={pickWinner}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.hubButtonText}>GIRAR RULETA</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={pickWinner}>
-          <Text style={styles.buttonText}>GIRAR RULETA</Text>
-        </TouchableOpacity>
-
-        {winner && <Text style={styles.winner}>🏆 {winner}</Text>}
+        {winner && (
+          <Text style={styles.winner}>🏆 {winner}</Text>
+        )}
       </View>
 
-      <View style={styles.rightSide}>
+      <View style={isNarrow ? styles.rightSideNarrow : styles.rightSide}>
+        {role === "streamer" && (
+          <View style={styles.sectionContainer}>
+            <TouchableOpacity style={styles.subsButton} onPress={fetchSubs}>
+              <Text style={styles.buttonText}>OBTENER SUSCRIPTORES</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {role !== "viewer" && (
           <View style={styles.sectionContainer}>
@@ -531,7 +620,7 @@ UI
         </TouchableOpacity>
 
         <ScrollView
-          style={styles.list}
+          style={isNarrow ? styles.listNarrow : styles.list}
           contentContainerStyle={styles.participantGrid}
         >
           {participants.map((p, i) => (
@@ -569,6 +658,29 @@ const styles = StyleSheet.create({
     marginLeft: 40,
   },
 
+  containerNarrow: {
+    flex: 1,
+    flexDirection: "column",
+    backgroundColor: "#ECE7E1",
+    padding: 16,
+    justifyContent: "flex-start",
+    alignItems: "stretch",
+  },
+
+  leftSideNarrow: {
+    alignItems: "center",
+    width: "100%",
+  },
+
+  rightSideNarrow: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    marginTop: 24,
+  },
+
+  listNarrow: {},
+
   title: {
     fontSize: 26,
     fontWeight: "700",
@@ -576,25 +688,52 @@ const styles = StyleSheet.create({
   },
 
   wheelContainer: {
-    width: WHEEL_SIZE,
-    height: WHEEL_SIZE,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 16,
   },
 
   pointer: {
     position: "absolute",
-    right: -14,
-    top: "50%",
-    marginTop: -15,
+    top: -2,
+    alignSelf: "center",
     width: 0,
     height: 0,
-    borderTopWidth: 15,
-    borderRightWidth: 25,
-    borderBottomWidth: 15,
-    borderTopColor: "transparent",
-    borderBottomColor: "transparent",
-    borderRightColor: "#333",
+    borderLeftWidth: 14,
+    borderRightWidth: 14,
+    borderTopWidth: 24,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#3A2F26",
+    zIndex: 10,
+  },
+
+  hubButton: {
+    position: "absolute",
+    width: 118,
+    height: 118,
+    borderRadius: 59,
+    backgroundColor: "#C5A582",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 5,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.28)",
+  },
+
+  hubButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 13,
+    textAlign: "center",
+    paddingHorizontal: 6,
+  },
+
+  subsButton: {
+    backgroundColor: "#C5A582",
+    padding: 12,
+    borderRadius: 6,
+    minWidth: 120,
+    alignItems: "center",
   },
 
   button: {
