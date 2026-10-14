@@ -23,5 +23,8 @@ export const API_CONFIG = {
     // Ahorcado
     AHORCADO_PHRASES: `${BASE_URL}/api/ahorcado/phrases`,
     AHORCADO_CHANNEL: `${BASE_URL}/api/ahorcado/channel`,
+
+    // Twitch
+    AVATARS: `${BASE_URL}/api/twitch/avatars`,
   }
 };
