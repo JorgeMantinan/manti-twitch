@@ -305,8 +305,11 @@ START
   function startGame() {
     const cardsGenerated: PlayerCard[] = [];
 
+    const allSubs =
+      participants.length > 0 && participants.every((p) => !!p.isSub);
+
     participants.forEach((p) => {
-      const amount = p.isSub ? 2 : 1;
+      const amount = allSubs ? 1 : p.isSub ? 2 : 1;
 
       for (let i = 0; i < amount; i++) {
         cardsGenerated.push({
@@ -451,7 +454,10 @@ MARKED
       <ScrollView contentContainerStyle={styles.cardsGrid}>
         {cards.map((c, i) => (
           <View key={i} style={[styles.card, c.isSub && styles.subCard]}>
-            <Text style={[styles.player, c.isSub && styles.subPlayer]}>
+            <Text
+              style={[styles.player, c.isSub && styles.subPlayer]}
+              numberOfLines={1}
+            >
               {c.player} {c.isSub ? "⭐" : ""}
             </Text>
 
@@ -551,6 +557,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingBottom: 30,
   },
 
   card: {
@@ -558,22 +566,25 @@ const styles = StyleSheet.create({
     margin: 6,
     padding: 6,
     borderRadius: 8,
-    width: "15%",
-    minWidth: 140,
+    width: "100%",
+    maxWidth: 296,
     alignItems: "center",
   },
 
   player: {
     textAlign: "center",
     fontWeight: "bold",
+    maxWidth: "100%",
   },
 
   row: {
     flexDirection: "row",
+    width: "100%",
   },
 
   cell: {
-    width: 28,
+    flex: 1,
+    minWidth: 0,
     height: 32,
     borderWidth: 1,
     borderColor: "#DDD",
@@ -591,6 +602,7 @@ const styles = StyleSheet.create({
 
   num: {
     fontWeight: "bold",
+    fontSize: 12,
   },
 
   buttonsRow: {
