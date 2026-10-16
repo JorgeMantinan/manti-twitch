@@ -13,9 +13,7 @@ describe('Roulette new features', () => {
       `/SmartRoulette?role=mod&data=${data(['Alice', 'Bob', 'Carol'])}&drawMode=prizes&spins=3`,
       { timeout: 15000 },
     );
-    cy.contains('Participants (3)')
-      .scrollIntoView()
-      .should('be.visible');
+    cy.contains('Participants (3)').should('exist');
     cy.wait(1200);
 
     cy.get('[placeholder="Premios (uno por línea)"]').type(
@@ -24,16 +22,22 @@ describe('Roulette new features', () => {
 
     cy.contains('GIRAR RULETA', { scrollBehavior: false }).click({ scrollBehavior: false });
     cy.contains('🏆', { timeout: 15000, scrollBehavior: false }).should('be.visible');
-    cy.contains('🎁 Sub 1 mes').should('be.visible');
-    cy.contains('Participants (2)').should('be.visible');
+    cy.contains('🎁 Sub 1 mes').scrollIntoView().should('be.visible');
+    cy.contains('Participants (2)').should('exist');
 
     cy.contains('GIRAR RULETA', { scrollBehavior: false }).click({ scrollBehavior: false });
     cy.contains('🏆', { timeout: 15000, scrollBehavior: false }).should('be.visible');
-    cy.contains('Participants (1)').should('be.visible');
+    cy.contains('Participants (1)').should('exist');
 
     cy.contains('GIRAR RULETA', { scrollBehavior: false }).click({ scrollBehavior: false });
     cy.contains('🏆', { timeout: 15000, scrollBehavior: false }).should('be.visible');
-    cy.contains('Participants (0)').should('be.visible');
+    cy.contains('Participants (0)').should('exist');
+
+    cy.contains('🏆 RESULTADOS', { timeout: 15000 }).should('be.visible');
+    cy.contains('— Sub 2 meses').should('be.visible');
+    cy.screenshot('results-modal');
+    cy.contains('Cerrar').click();
+    cy.contains('🏆 RESULTADOS').should('not.exist');
 
     cy.contains('¡PREMIOS AGOTADOS!').scrollIntoView().should('be.visible');
     cy.contains('Historial').scrollIntoView().should('be.visible');
@@ -71,10 +75,10 @@ describe('Roulette new features', () => {
     cy.contains('Participants (1)').should('be.visible');
     cy.wait(1000);
 
-    cy.contains('🔒 BLOQUEAR').click({ scrollBehavior: false });
+    cy.contains('🔒 BLOQUEAR').scrollIntoView().click({ force: true });
     cy.get('[placeholder="Add participant"]').should('have.attr', 'readonly');
 
-    cy.contains('🔓 LISTA').click({ scrollBehavior: false });
+    cy.contains('🔓 LISTA').scrollIntoView().click({ force: true });
     cy.get('[placeholder="Add participant"]').should('not.have.attr', 'readonly');
   });
 

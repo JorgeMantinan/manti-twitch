@@ -9,6 +9,8 @@ import {
   ScrollView,
   Animated,
   Easing,
+  Image,
+  Modal,
   useWindowDimensions,
 } from "react-native";
 
@@ -58,9 +60,12 @@ const MAX_SLICES = 120;
 const STORAGE_PARTICIPANTS = "roulette_participants";
 const STORAGE_TEMPLATES = "roulette_templates";
 const STORAGE_PREFS = "roulette_prefs";
+const STORAGE_PODIUMS = "roulette_podiums";
 
 const ANTI_REPEAT_CYCLE: Record<number, number> = { 0: 2, 2: 5, 5: 10, 10: 0 };
 const COUNTDOWN_CYCLE = [0, 30, 60, 120];
+const AUTO_CYCLE = [0, 5, 10];
+const MIN_WEIGHT_CYCLE = [0, 2, 3, 5];
 
 type Prefs = {
   spins?: number;
@@ -75,7 +80,12 @@ type Prefs = {
   prizesMax?: number;
   filterMode?: FilterMode;
   prizeTexts?: string[];
+  autoSec?: number;
+  minWeight?: number;
 };
+
+type PodiumEntry = { username: string; prize: string };
+type Podium = { at: number; entries: PodiumEntry[] };
 
 function readStorage<T>(key: string, fallback: T): T {
   if (Platform.OS !== "web") return fallback;
@@ -205,6 +215,17 @@ export default function SmartRoulette() {
     const v = pref("prizeTexts", [] as string[]);
     return Array.isArray(v) ? v : [];
   });
+  const [autoSec, setAutoSec] = useState<number>(() => Number(pref("autoSec", 0)));
+  const autoSecRef = useRef(autoSec);
+  const [minWeight, setMinWeight] = useState<number>(() => Number(pref("minWeight", 0)));
+  const [podiums, setPodiums] = useState<Podium[]>(() =>
+    readStorage<Podium[]>(STORAGE_PODIUMS, []),
+  );
+  const [podiumsOpen, setPodiumsOpen] = useState(false);
+  const [resultsVisible, setResultsVisible] = useState(false);
+  const lastArchivedAtRef = useRef<number | null>(null);
+  const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pickWinnerRef = useRef<() => void>(() => {});
   const [antiRepeat, setAntiRepeat] = useState<number>(() => Number(pref("antiRepeat", 0)));
   const [duelOn, setDuelOn] = useState(false);
   const [duelA, setDuelA] = useState("");
@@ -242,7 +263,7 @@ export default function SmartRoulette() {
     readStorage<Record<string, Participant[]>>(STORAGE_TEMPLATES, {}),
   );
   const [templateName, setTemplateName] = useState("");
-  const [copied, setCopied] = useState<"link" | "results" | "log" | null>(null);
+  const [copied, setCopied] = useState<"link" | "results" | "log" | "text" | null>(null);
 
   // Extras
   const [modalOn, setModalOn] = useState<boolean>(() => !!pref("modalOn", false));
@@ -274,6 +295,8 @@ export default function SmartRoulette() {
       prizesMax,
       filterMode,
       prizeTexts,
+      autoSec,
+      minWeight,
     } satisfies Prefs);
   }, [
     spins,
@@ -288,6 +311,8 @@ export default function SmartRoulette() {
     prizesMax,
     filterMode,
     prizeTexts,
+    autoSec,
+    minWeight,
   ]);
 
   // Session restore prompt (only when not coming from ?data)
@@ -316,6 +341,10 @@ export default function SmartRoulette() {
   useEffect(() => {
     soundOnRef.current = soundOn;
   }, [soundOn]);
+
+  useEffect(() => {
+    autoSecRef.current = autoSec;
+  }, [autoSec]);
 
   useEffect(() => {
     modalOnRef.current = modalOn;
@@ -451,6 +480,33 @@ export default function SmartRoulette() {
     } catch {}
   };
 
+  const playFanfare = () => {
+    if (Platform.OS !== "web") return;
+    try {
+      const w = window as any;
+      const AC = w.AudioContext || w.webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AC();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume();
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, i) => {
+        const t0 = ctx.currentTime + i * 0.18;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.4);
+      });
+    } catch {}
+  };
+
   const spinAnim = useRef(new Animated.Value(0)).current;
   const pointerAnim = useRef(new Animated.Value(0)).current;
 
@@ -489,6 +545,10 @@ export default function SmartRoulette() {
 
   const basePool = (): Participant[] => {
     let pool = participants.filter((p) => !p.paused);
+
+    if (minWeight > 0) {
+      pool = pool.filter((p) => p.weight >= minWeight);
+    }
 
     if (duelOn) {
       const set = new Set(
@@ -540,7 +600,7 @@ export default function SmartRoulette() {
     }
     slicesDirtyRef.current = false;
     setVisualSlices(buildVisualFrom(basePool()));
-  }, [participants, duelOn, duelA, duelB, filterMode, followerSet, antiRepeat]);
+  }, [participants, duelOn, duelA, duelB, filterMode, followerSet, antiRepeat, minWeight]);
 
   /*
   ANON LABELS
@@ -836,7 +896,7 @@ export default function SmartRoulette() {
   SHARE, CSV & LOG
   */
 
-  const flashCopied = (what: "link" | "results" | "log") => {
+  const flashCopied = (what: "link" | "results" | "log" | "text") => {
     setCopied(what);
     setTimeout(() => setCopied(null), 2000);
   };
@@ -871,6 +931,24 @@ export default function SmartRoulette() {
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
       flashCopied("results");
+    } catch {}
+  };
+
+  const copyPrettyResults = async () => {
+    if (Platform.OS !== "web" || !history.length) return;
+
+    const medal = (i: number) =>
+      i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : "";
+    const lines = history.map((h, i) => {
+      const prize = (prizeTexts[i] || "").trim();
+      return `${medal(i)}${i + 1}º ${h.username}${prize ? ` — ${prize}` : ""}`;
+    });
+    const date = new Date().toLocaleDateString();
+    const text = `🏆 Sorteo — ${date}\n${lines.join("\n")}`;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      flashCopied("text");
     } catch {}
   };
 
@@ -967,19 +1045,28 @@ export default function SmartRoulette() {
 
   const animateSpin = (
     winnerName: string,
-    visual: Participant[],
+    inVisual: Participant[],
     mode: DrawMode,
     winnerWeight: number,
   ) => {
-    const slice = 360 / Math.max(visual.length, 1);
-
-    const winnerIndex = visual.findIndex((p) => p.username === winnerName);
-
+    // If the winner is missing from the wheel (filter drift / backend pick),
+    // rebuild the slices and retry; last resort: force-append the winner.
+    let visual = inVisual;
+    let winnerIndex = visual.findIndex((p) => p.username === winnerName);
     if (winnerIndex === -1) {
-      console.warn("Winner not in visual slices");
-      setSpinning(false);
-      return;
+      visual = buildVisualFrom(basePool());
+      winnerIndex = visual.findIndex((p) => p.username === winnerName);
+      if (winnerIndex === -1) {
+        visual = [
+          ...visual,
+          { username: winnerName, weight: Math.max(1, winnerWeight) },
+        ].slice(0, MAX_SLICES);
+        winnerIndex = visual.length - 1;
+      }
+      setVisualSlices(visual);
     }
+
+    const slice = 360 / Math.max(visual.length, 1);
 
     const centerOfSlice = winnerIndex * slice + slice / 2;
     const targetAngle = (((270 - centerOfSlice) % 360) + 360) % 360;
@@ -1010,6 +1097,19 @@ export default function SmartRoulette() {
         setVisualSlices(buildVisualFrom(basePool()));
       }
       pushLog(`Ganó ${winnerName}`);
+
+      if (mode === "prizes" && round + 1 === prizesMax && soundOnRef.current) {
+        playFanfare();
+      }
+
+      if (autoSecRef.current > 0) {
+        const exhausted = mode === "prizes" && round + 1 >= prizesMax;
+        if (!exhausted) {
+          autoTimerRef.current = setTimeout(() => {
+            pickWinnerRef.current();
+          }, autoSecRef.current * 1000);
+        }
+      }
 
       if (announceOn && role !== "viewer" && socketRef.current) {
         const ch = role === "mod" ? streamer.trim() : undefined;
@@ -1157,6 +1257,10 @@ export default function SmartRoulette() {
     drawMode === "prizes" && history.length >= prizesMax;
 
   const pickWinner = async () => {
+    if (autoTimerRef.current) {
+      clearTimeout(autoTimerRef.current);
+      autoTimerRef.current = null;
+    }
     if (spinning || prizesExhausted) return;
 
     setRunning(false);
@@ -1208,6 +1312,37 @@ export default function SmartRoulette() {
     setVisualSlices(visual);
     animateSpin(winnerUser.username, visual, drawMode, original?.weight ?? 1);
   };
+
+  pickWinnerRef.current = pickWinner;
+
+  // Archive podium when a prize run completes + open results screen
+  useEffect(() => {
+    if (drawMode !== "prizes") return;
+    if (history.length === 0 || history.length < prizesMax) return;
+    const lastAt = history[history.length - 1].at;
+    if (lastArchivedAtRef.current === lastAt) return;
+    lastArchivedAtRef.current = lastAt;
+
+    const entries: PodiumEntry[] = history.map((h, i) => ({
+      username: h.username,
+      prize: (prizeTexts[i] || "").trim(),
+    }));
+    const podium: Podium = { at: Date.now(), entries };
+
+    setPodiums((prev) => {
+      const next = [podium, ...prev].slice(0, 20);
+      writeStorage(STORAGE_PODIUMS, next);
+      return next;
+    });
+    setResultsVisible(true);
+  }, [history, drawMode, prizesMax, prizeTexts]);
+
+  // Cleanup pending auto spin on unmount
+  useEffect(() => {
+    return () => {
+      if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
+    };
+  }, []);
 
   /*
   DERIVED
@@ -1328,15 +1463,26 @@ export default function SmartRoulette() {
         <ScrollView style={styles.historyList}>
           {[...history].reverse().map((h) => {
             const place = history.indexOf(h) + 1;
+            const medal =
+              place === 1 ? "🥇 " : place === 2 ? "🥈 " : place === 3 ? "🥉 " : "";
             return (
-              <Text
-                key={`${h.round}-${h.at}`}
-                style={[styles.historyItem, dark && styles.textLight]}
-              >
-                {place}º {h.username}
-                {!!prizeTexts[place - 1]?.trim() &&
-                  ` — ${prizeTexts[place - 1].trim()}`}
-              </Text>
+              <View key={`${h.round}-${h.at}`} style={styles.historyRow}>
+                {avatars[h.username] ? (
+                  <Image
+                    source={{ uri: avatars[h.username] }}
+                    style={styles.avatarSmall}
+                  />
+                ) : null}
+                <Text
+                  style={[styles.historyItem, dark && styles.textLight]}
+                  numberOfLines={1}
+                >
+                  {medal}
+                  {place}º {h.username}
+                  {!!prizeTexts[place - 1]?.trim() &&
+                    ` — ${prizeTexts[place - 1].trim()}`}
+                </Text>
+              </View>
             );
           })}
         </ScrollView>
@@ -1346,6 +1492,17 @@ export default function SmartRoulette() {
               {copied === "results" ? "COPIADO ✓" : "COPIAR"}
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.tinyButton} onPress={copyPrettyResults}>
+            <Text style={styles.tinyButtonText}>
+              {copied === "text" ? "TEXTO ✓" : "TEXTO"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tinyButton}
+            onPress={() => setPodiumsOpen((v) => !v)}
+          >
+            <Text style={styles.tinyButtonText}>PODIOS ({podiums.length})</Text>
+          </TouchableOpacity>
           {drawMode !== "replace" && history.length > 0 && (
             <TouchableOpacity style={styles.tinyButton} onPress={undoLastWinner}>
               <Text style={styles.tinyButtonText}>↩ ÚLTIMO</Text>
@@ -1354,6 +1511,45 @@ export default function SmartRoulette() {
         </View>
       </View>
     ) : null;
+
+  const podiumsBlock = podiumsOpen && podiums.length > 0 && (
+    <View style={[styles.historyBox, dark && styles.historyBoxDark]}>
+      <Text style={styles.historyTitle}>Podios guardados</Text>
+      <ScrollView style={styles.historyList}>
+        {podiums.map((pod, pi) => (
+          <View key={pod.at} style={styles.podiumBlock}>
+            <View style={styles.historyActions}>
+              <Text style={[styles.historyItem, dark && styles.textLight]}>
+                {new Date(pod.at).toLocaleString()}
+              </Text>
+              <TouchableOpacity
+                style={styles.tinyButton}
+                onPress={() => {
+                  setPodiums((prev) => {
+                    const next = prev.filter((_, i) => i !== pi);
+                    writeStorage(STORAGE_PODIUMS, next);
+                    return next;
+                  });
+                }}
+              >
+                <Text style={styles.tinyButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {pod.entries.map((e, ei) => (
+              <Text
+                key={ei}
+                style={[styles.historyItem, dark && styles.textMuted]}
+              >
+                {ei === 0 ? "🥇 " : ei === 1 ? "🥈 " : ei === 2 ? "🥉 " : ""}
+                {ei + 1}º {e.username}
+                {e.prize ? ` — ${e.prize}` : ""}
+              </Text>
+            ))}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
 
   const overlayBlock = (
     <View
@@ -1450,6 +1646,20 @@ export default function SmartRoulette() {
             antiRepeat > 0 ? `NO REPETIR: ${antiRepeat}` : "NO REPETIR: OFF",
             () => setAntiRepeat((n) => ANTI_REPEAT_CYCLE[n] ?? 0),
             antiRepeat > 0,
+          )}
+          {tinyBtn(
+            autoSec > 0 ? `AUTO: ${autoSec}s` : "AUTO: OFF",
+            () =>
+              setAutoSec((s) => AUTO_CYCLE[(AUTO_CYCLE.indexOf(s) + 1) % AUTO_CYCLE.length]),
+            autoSec > 0,
+          )}
+          {tinyBtn(
+            minWeight > 0 ? `PESO MÍN: ${minWeight}` : "PESO MÍN: OFF",
+            () =>
+              setMinWeight(
+                (s) => MIN_WEIGHT_CYCLE[(MIN_WEIGHT_CYCLE.indexOf(s) + 1) % MIN_WEIGHT_CYCLE.length],
+              ),
+            minWeight > 0,
           )}
         </View>
 
@@ -1774,9 +1984,9 @@ export default function SmartRoulette() {
       </View>
 
       <View style={styles.participantGrid}>
-        {visibleParticipants.map((p) => (
+        {visibleParticipants.map((p, idx) => (
+          <FadeInRow key={p.username} delay={Math.min(idx * 30, 400)}>
           <View
-            key={p.username}
             style={[
               styles.row,
               dark && styles.rowDark,
@@ -1837,6 +2047,7 @@ export default function SmartRoulette() {
               </TouchableOpacity>
             </View>
           </View>
+          </FadeInRow>
         ))}
         {visibleParticipants.length === 0 && (
           <Text style={[styles.emptyList, dark && styles.textMuted]}>
@@ -1857,6 +2068,7 @@ export default function SmartRoulette() {
       {winnerBlock}
       {statusBlock}
       {historyBlock}
+      {podiumsBlock}
     </>
   );
 
@@ -1867,6 +2079,46 @@ export default function SmartRoulette() {
       player={winner || ""}
       onClose={() => setWinModalVisible(false)}
     />
+  );
+
+  const resultsModal = (
+    <Modal visible={resultsVisible} transparent animationType="fade">
+      <View style={styles.resultsOverlay}>
+        <View style={[styles.resultsCard, dark && styles.resultsCardDark]}>
+          <Text style={[styles.resultsTitle, dark && styles.textLight]}>
+            🏆 RESULTADOS
+          </Text>
+          <ScrollView style={styles.resultsList}>
+            {history.map((h, i) => {
+              const medal =
+                i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : "";
+              const prize = (prizeTexts[i] || "").trim();
+              return (
+                <View key={`${h.round}-${h.at}`} style={styles.historyRow}>
+                  {avatars[h.username] ? (
+                    <Image
+                      source={{ uri: avatars[h.username] }}
+                      style={styles.avatarSmall}
+                    />
+                  ) : null}
+                  <Text style={[styles.resultsEntry, dark && styles.textLight]}>
+                    {medal}
+                    {i + 1}º {h.username}
+                    {prize ? ` — ${prize}` : ""}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => setResultsVisible(false)}
+          >
+            <Text style={styles.buttonText}>Cerrar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 
   if (isNarrow) {
@@ -1880,6 +2132,7 @@ export default function SmartRoulette() {
           {rightContent}
         </ScrollView>
         {winModal}
+        {resultsModal}
       </View>
     );
   }
@@ -1899,7 +2152,36 @@ export default function SmartRoulette() {
         {rightContent}
       </ScrollView>
       {winModal}
+      {resultsModal}
     </View>
+  );
+}
+
+function FadeInRow({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  const opacity = useRef(
+    new Animated.Value(prefersReducedMotion() ? 1 : 0),
+  ).current;
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 250,
+      delay,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+      isInteraction: false,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[styles.fadeRow, { opacity }]}>{children}</Animated.View>
   );
 }
 
@@ -2408,5 +2690,69 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     minWidth: 120,
     alignItems: "center",
+  },
+
+  fadeRow: {
+    width: "100%",
+  },
+
+  historyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 2,
+  },
+
+  avatarSmall: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+  },
+
+  podiumBlock: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.08)",
+    paddingTop: 6,
+    marginTop: 6,
+  },
+
+  resultsOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  resultsCard: {
+    backgroundColor: "#fff",
+    padding: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    maxWidth: 420,
+    width: "90%",
+  },
+
+  resultsCardDark: {
+    backgroundColor: "#2C2C2E",
+  },
+
+  resultsTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 12,
+    color: "#2A2A2A",
+  },
+
+  resultsList: {
+    maxHeight: 320,
+    alignSelf: "stretch",
+    marginBottom: 16,
+  },
+
+  resultsEntry: {
+    fontSize: 15,
+    paddingVertical: 3,
+    color: "#2A2A2A",
+    flex: 1,
   },
 });
