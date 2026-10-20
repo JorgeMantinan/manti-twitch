@@ -152,10 +152,13 @@ export async function apiFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const doFetch = (token?: string) => {
-    if (!token) return fetch(url, init);
-    const headers = new Headers(init?.headers || {});
-    headers.set("Authorization", `Bearer ${token}`);
-    return fetch(url, { ...init, headers });
+    const opts: RequestInit = { ...init, cache: "no-store" };
+    if (token) {
+      const headers = new Headers(init?.headers || {});
+      headers.set("Authorization", `Bearer ${token}`);
+      opts.headers = headers;
+    }
+    return fetch(url, opts);
   };
 
   const res = await doFetch();
