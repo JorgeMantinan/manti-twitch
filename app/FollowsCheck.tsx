@@ -263,6 +263,10 @@ export default function FollowsCheck() {
   };
 
   const jumpTo = (id: string) => {
+    if (id === "sec-top") {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     if (Platform.OS === "web") {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -566,7 +570,6 @@ export default function FollowsCheck() {
               )}
             </View>
 
-            <View style={styles.sectionAnchor} nativeID="sec-top" />
           </>
         )}
       </ScrollView>
