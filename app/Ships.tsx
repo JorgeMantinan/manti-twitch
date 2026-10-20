@@ -21,6 +21,7 @@ import { io } from "socket.io-client";
 import { getSessionId } from "../utils/session";
 
 import { API_CONFIG } from '../constants/api';
+import { apiFetch } from '../services/auth';
 
 const { width, height } = Dimensions.get("window");
 
@@ -202,7 +203,7 @@ export default function Ships() {
 
     const token = await getToken();
 
-    await fetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
+    await apiFetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -222,7 +223,7 @@ export default function Ships() {
   const stopRaffle = async () => {
     const token = await getToken();
 
-    const res = await fetch(
+    const res = await apiFetch(
       API_CONFIG.ENDPOINTS.RAFFLE_STOP,
       {
         method: "POST",
@@ -259,7 +260,7 @@ export default function Ships() {
 
     const token = await getToken();
 
-    const res = await fetch(
+    const res = await apiFetch(
       API_CONFIG.ENDPOINTS.SUBS,
       {
         method: "POST",

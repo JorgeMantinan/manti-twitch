@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 
 import { API_CONFIG } from "../constants/api";
-import { decodeToken } from "../services/auth";
+import { apiFetch, decodeToken } from "../services/auth";
 
 type FollowRow = { login: string; name: string; at?: string };
 type SortMode = "az" | "meSigue" | "noMeSigue";
@@ -30,18 +30,138 @@ const SORT_LABEL: Record<SortMode, string> = {
   noMeSigue: "ORDEN: NO ME SIGUE",
 };
 
+const FOLLOW_CACHE_KEY = "followscheck_cache_v1";
+const FOLLOW_CACHE_TTL = 5 * 60 * 1000;
+const RENDER_CAP = 300;
+
+type FollowCache = {
+  at: number;
+  followings: FollowRow[];
+  followers: FollowRow[];
+  truncatedFollowings?: boolean;
+  truncatedFollowers?: boolean;
+  totalFollowings?: number | null;
+  totalFollowers?: number | null;
+};
+
+function readFollowCache(): FollowCache | null {
+  if (Platform.OS !== "web") return null;
+  try {
+    const raw = localStorage.getItem(FOLLOW_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as FollowCache) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function FollowsCheck() {
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
 
   const [followings, setFollowings] = useState<FollowRow[]>([]);
   const [followers, setFollowers] = useState<FollowRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [slowHint, setSlowHint] = useState(false);
   const [error, setError] = useState("");
   const [needsScope, setNeedsScope] = useState(false);
   const [search, setSearch] = useState("");
-  const [copied, setCopied] = useState<"sigo" | "fans" | null>(null);
-
+  const [copied, setCopied] = useState<"sigo" | "siguen" | "fans" | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("az");
+  const [lastFetch, setLastFetch] = useState<number | null>(null);
+  const [truncated, setTruncated] = useState<{
+    followings: boolean;
+    followers: boolean;
+    totalFollowings: number | null;
+    totalFollowers: number | null;
+  }>({ followings: false, followers: false, totalFollowings: null, totalFollowers: null });
+
+  const applyData = (cache: FollowCache) => {
+    setFollowings(cache.followings || []);
+    setFollowers(cache.followers || []);
+    setTruncated({
+      followings: !!cache.truncatedFollowings,
+      followers: !!cache.truncatedFollowers,
+      totalFollowings: cache.totalFollowings ?? null,
+      totalFollowers: cache.totalFollowers ?? null,
+    });
+    setLastapiFetch(cache.at);
+  };
+
+  const loadFromApi = async (token: string, isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    setLoading(true);
+    setSlowHint(false);
+    setError("");
+
+    const slowTimer = setTimeout(() => setSlowHint(true), 4000);
+
+    try {
+      const [fRes, frRes] = await Promise.all([
+        apiFetch(API_CONFIG.ENDPOINTS.FOLLOWINGS, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        apiFetch(API_CONFIG.ENDPOINTS.FOLLOWERS_MY, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (fRes.status === 403 || frRes.status === 403) {
+        setNeedsScope(true);
+        return;
+      }
+      if (!fRes.ok || !frRes.ok) {
+        const stale = readFollowCache();
+        if (stale) {
+          applyData(stale);
+          setError("No se pudo actualizar — mostrando datos guardados");
+        } else {
+          setError("Error cargando las listas de Twitch");
+        }
+        return;
+      }
+
+      const fData = await fRes.json();
+      const frData = await frRes.json();
+
+      const cache: FollowCache = {
+        at: Date.now(),
+        followings: (fData.followings || []).map((r: any) => ({
+          login: String(r.login || "").toLowerCase(),
+          name: r.name || r.login,
+        })),
+        followers: (frData.followers || []).map((r: any) => ({
+          login: String(r.login || "").toLowerCase(),
+          name: r.name || r.login,
+          at: r.at,
+        })),
+        truncatedFollowings: !!fData.truncated,
+        truncatedFollowers: !!frData.truncated,
+        totalFollowings: typeof fData.total === "number" ? fData.total : null,
+        totalFollowers: typeof frData.total === "number" ? frData.total : null,
+      };
+
+      applyData(cache);
+      if (Platform.OS === "web") {
+        try {
+          localStorage.setItem(FOLLOW_CACHE_KEY, JSON.stringify(cache));
+        } catch {}
+      }
+    } catch {
+      const stale = readFollowCache();
+      if (stale) {
+        applyData(stale);
+        setError("No se pudo conectar — mostrando datos guardados");
+      } else {
+        setError("No se pudo conectar con el servidor");
+      }
+    } finally {
+      clearTimeout(slowTimer);
+      setSlowHint(false);
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -63,61 +183,40 @@ export default function FollowsCheck() {
           : [];
 
       if (!scopes.includes("user:read:follows")) {
-        if (alive) {
-          setNeedsScope(true);
-          setLoading(false);
-        }
+        setNeedsScope(true);
+        setLoading(false);
         return;
       }
 
-      try {
-        const [fRes, frRes] = await Promise.all([
-          fetch(API_CONFIG.ENDPOINTS.FOLLOWINGS, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(API_CONFIG.ENDPOINTS.FOLLOWERS_MY, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-
-        if (!alive) return;
-
-        if (fRes.status === 403 || frRes.status === 403) {
-          setNeedsScope(true);
-          return;
-        }
-        if (!fRes.ok || !frRes.ok) {
-          setError("Error cargando las listas de Twitch");
-          return;
-        }
-
-        const fData = await fRes.json();
-        const frData = await frRes.json();
-        if (!alive) return;
-
-        setFollowings(
-          (fData.followings || []).map((r: any) => ({
-            login: String(r.login || "").toLowerCase(),
-            name: r.name || r.login,
-          })),
-        );
-        setFollowers(
-          (frData.followers || []).map((r: any) => ({
-            login: String(r.login || "").toLowerCase(),
-            name: r.name || r.login,
-            at: r.at,
-          })),
-        );
-      } catch {
-        if (alive) setError("No se pudo conectar con el servidor");
-      } finally {
-        if (alive) setLoading(false);
+      // Fresh cache → instant paint, no network
+      const cache = readFollowCache();
+      if (cache && Date.now() - cache.at < FOLLOW_CACHE_TTL) {
+        applyData(cache);
+        setLoading(false);
+        return;
       }
+
+      if (!alive) return;
+      await loadFromApi(token);
     })();
     return () => {
       alive = false;
     };
   }, []);
+
+  const onRefresh = async () => {
+    const token =
+      Platform.OS === "web"
+        ? localStorage.getItem("userToken")
+        : await SecureStore.getItemAsync("userToken");
+    if (token) await loadFromApi(token, true);
+  };
+
+  const jumpTo = (id: string) => {
+    if (Platform.OS === "web") {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const followingsSet = useMemo(
     () => new Set(followings.map((f) => f.login)),
@@ -154,6 +253,11 @@ export default function FollowsCheck() {
     return rows;
   }, [followings, followersSet, sortMode]);
 
+  const sortedFollowers = useMemo(
+    () => [...followers].sort((a, b) => a.login.localeCompare(b.login)),
+    [followers],
+  );
+
   const query = search.trim().toLowerCase();
   const filterRows = (rows: FollowRow[]) =>
     query
@@ -162,7 +266,9 @@ export default function FollowsCheck() {
         )
       : rows;
 
-  const copyList = async (rows: FollowRow[], key: "sigo" | "fans") => {
+  const capRows = (rows: FollowRow[]) => rows.slice(0, RENDER_CAP);
+
+  const copyList = async (rows: FollowRow[], key: "sigo" | "siguen" | "fans") => {
     if (Platform.OS !== "web") return;
     try {
       await navigator.clipboard.writeText(rows.map((r) => r.login).join("\n"));
@@ -179,7 +285,7 @@ export default function FollowsCheck() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         <Text style={styles.title}>Siguiendo y fans</Text>
 
         {needsScope && (
@@ -194,31 +300,82 @@ export default function FollowsCheck() {
           </View>
         )}
 
+        {!!truncated.followings || !!truncated.followers ? (
+          <View style={styles.warnBanner}>
+            <Text style={styles.warnText}>
+              ⚠️ Listas parciales (límite de Twitch):{" "}
+              {truncated.followings && truncated.totalFollowings != null
+                ? `siguiendo ${followings.length} de ${truncated.totalFollowings}. `
+                : ""}
+              {truncated.followers && truncated.totalFollowers != null
+                ? `seguidores ${followers.length} de ${truncated.totalFollowers}. `
+                : ""}
+              La sección «no los sigo» puede ser inexacta con estas cifras.
+            </Text>
+          </View>
+        ) : null}
+
         {!!error && <Text style={styles.error}>{error}</Text>}
 
         {loading && !needsScope && (
-          <ActivityIndicator size="large" color="#C5A582" style={{ marginTop: 40 }} />
+          <View style={{ marginTop: 40, alignItems: "center" }}>
+            <ActivityIndicator size="large" color="#C5A582" />
+            {slowHint && (
+              <Text style={styles.slowHint}>
+                Tardando… es normal si sigues/siguen a mucha gente (Twitch
+                entrega la lista de 100 en 100).
+              </Text>
+            )}
+          </View>
         )}
 
-        {!loading && !needsScope && !error && (
+        {!loading && !needsScope && (
           <>
-            <View style={styles.chipsRow}>
-              <View style={styles.chip}>
-                <Text style={styles.chipNum}>{followings.length}</Text>
-                <Text style={styles.chipLabel}>Siguiendo</Text>
-              </View>
-              <View style={styles.chip}>
-                <Text style={styles.chipNum}>
-                  {followings.filter((f) => followersSet.has(f.login)).length}
+            <View style={styles.toolbar}>
+              {lastFetch ? (
+                <Text style={styles.fetchedAt}>
+                  Datos de {new Date(lastFetch).toLocaleTimeString()}
                 </Text>
-                <Text style={styles.chipLabel}>Te siguen</Text>
-              </View>
-              <View style={styles.chip}>
+              ) : null}
+              <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
+                <Text style={styles.copyText}>
+                  {refreshing ? "ACTUALIZANDO…" : "REFRESCAR"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.chipsRow}>
+              <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-sigo")}>
+                <Text style={styles.chipNum}>{followings.length}</Text>
+                <Text style={styles.chipLabel}>A los que sigo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-siguen")}>
+                <Text style={styles.chipNum}>{followers.length}</Text>
+                <Text style={styles.chipLabel}>Me siguen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-fans")}>
                 <Text style={[styles.chipNum, { color: "#C94B4B" }]}>
                   {notFollowedBack.length}
                 </Text>
                 <Text style={styles.chipLabel}>Fans sin seguir</Text>
-              </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.navRow}>
+              {(["sec-sigo", "sec-siguen", "sec-fans"] as const).map((id, i) => (
+                <TouchableOpacity
+                  key={id}
+                  style={styles.navBtn}
+                  onPress={() => jumpTo(id)}
+                >
+                  <Text style={styles.navBtnText}>
+                    {["IR A: SIGUIENDO", "IR A: ME SIGUEN", "IR A: FANS"][i]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.navBtn} onPress={() => jumpTo("sec-top")}>
+                <Text style={styles.navBtnText}>⬆ ARRIBA</Text>
+              </TouchableOpacity>
             </View>
 
             <TextInput
@@ -228,83 +385,137 @@ export default function FollowsCheck() {
               style={styles.input}
             />
 
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                A los que sigo ({followings.length})
-              </Text>
-              <View style={styles.headerButtons}>
+            {/* SECTION: a los que sigo */}
+            <View nativeID="sec-sigo" style={styles.sectionAnchor}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  A los que sigo ({followings.length})
+                </Text>
+                <View style={styles.headerButtons}>
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => setSortMode((m) => SORT_CYCLE[m])}
+                  >
+                    <Text style={styles.copyText}>{SORT_LABEL[sortMode]}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => copyList(filterRows(sortedFollowings), "sigo")}
+                  >
+                    <Text style={styles.copyText}>
+                      {copied === "sigo" ? "COPIADO ✓" : "COPIAR"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {capRows(filterRows(sortedFollowings)).map((f) => {
+                const followsMe = followersSet.has(f.login);
+                return (
+                  <View key={f.login} style={styles.row}>
+                    <View style={styles.rowNames}>
+                      <Text style={styles.rowName}>{f.name}</Text>
+                      <Text style={styles.rowLogin}>@{f.login}</Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.badge,
+                        followsMe ? styles.badgeFollowed : styles.badgeNot,
+                      ]}
+                    >
+                      {followsMe ? "ME SIGUE" : "NO ME SIGUE"}
+                    </Text>
+                  </View>
+                );
+              })}
+              {filterRows(sortedFollowings).length > RENDER_CAP && (
+                <Text style={styles.capNote}>
+                  Mostrando los primeros {RENDER_CAP} — usa la búsqueda o COPIAR
+                  para el resto
+                </Text>
+              )}
+            </View>
+
+            {/* SECTION: me siguen */}
+            <View nativeID="sec-siguen" style={styles.sectionAnchor}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Me siguen ({followers.length})
+                </Text>
                 <TouchableOpacity
                   style={styles.copyButton}
-                  onPress={() => setSortMode((m) => SORT_CYCLE[m])}
-                >
-                  <Text style={styles.copyText}>{SORT_LABEL[sortMode]}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.copyButton}
-                  onPress={() => copyList(filterRows(sortedFollowings), "sigo")}
+                  onPress={() => copyList(filterRows(sortedFollowers), "siguen")}
                 >
                   <Text style={styles.copyText}>
-                    {copied === "sigo" ? "COPIADO ✓" : "COPIAR"}
+                    {copied === "siguen" ? "COPIADO ✓" : "COPIAR"}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
 
-            {filterRows(sortedFollowings).map((f) => {
-              const followsMe = followersSet.has(f.login);
-              return (
+              {capRows(filterRows(sortedFollowers)).map((f) => (
                 <View key={f.login} style={styles.row}>
                   <View style={styles.rowNames}>
                     <Text style={styles.rowName}>{f.name}</Text>
                     <Text style={styles.rowLogin}>@{f.login}</Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.badge,
-                      followsMe ? styles.badgeFollowed : styles.badgeNot,
-                    ]}
-                  >
-                    {followsMe ? "ME SIGUE" : "NO ME SIGUE"}
-                  </Text>
+                  {followingsSet.has(f.login) ? (
+                    <Text style={[styles.badge, styles.badgeFollowed]}>LO SIGO</Text>
+                  ) : null}
                 </View>
-              );
-            })}
-
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                Te siguen y no los sigo ({notFollowedBack.length})
-              </Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyList(filterRows(notFollowedBack), "fans")}
-              >
-                <Text style={styles.copyText}>
-                  {copied === "fans" ? "COPIADO ✓" : "COPIAR"}
+              ))}
+              {filterRows(sortedFollowers).length > RENDER_CAP && (
+                <Text style={styles.capNote}>
+                  Mostrando los primeros {RENDER_CAP} — usa la búsqueda o COPIAR
+                  para el resto
                 </Text>
-              </TouchableOpacity>
+              )}
             </View>
-            {filterRows(notFollowedBack).map((f) => (
-              <View key={f.login} style={styles.row}>
-                <View style={styles.rowNames}>
-                  <Text style={styles.rowName}>{f.name}</Text>
-                  <Text style={styles.rowLogin}>@{f.login}</Text>
-                </View>
-                {f.at ? (
-                  <Text style={styles.rowDate}>
-                    {new Date(f.at).toLocaleDateString()}
-                  </Text>
-                ) : null}
-              </View>
-            ))}
 
-            {filterRows(notFollowedBack).length === 0 && (
-              <Text style={styles.empty}>
-                {query ? "Sin coincidencias" : "Sigues a todo el que te sigue 🎉"}
-              </Text>
-            )}
+            {/* SECTION: fans sin seguir */}
+            <View nativeID="sec-fans" style={styles.sectionAnchor}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Te siguen y no los sigo ({notFollowedBack.length})
+                </Text>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => copyList(filterRows(notFollowedBack), "fans")}
+                >
+                  <Text style={styles.copyText}>
+                    {copied === "fans" ? "COPIADO ✓" : "COPIAR"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {capRows(filterRows(notFollowedBack)).map((f) => (
+                <View key={f.login} style={styles.row}>
+                  <View style={styles.rowNames}>
+                    <Text style={styles.rowName}>{f.name}</Text>
+                    <Text style={styles.rowLogin}>@{f.login}</Text>
+                  </View>
+                  {f.at ? (
+                    <Text style={styles.rowDate}>
+                      {new Date(f.at).toLocaleDateString()}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+
+              {filterRows(notFollowedBack).length === 0 && (
+                <Text style={styles.empty}>
+                  {query ? "Sin coincidencias" : "Sigues a todo el que te sigue 🎉"}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.sectionAnchor} nativeID="sec-top" />
           </>
         )}
       </ScrollView>
+
+      <TouchableOpacity style={styles.fab} onPress={() => jumpTo("sec-top")}>
+        <Text style={styles.fabText}>⬆</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -316,10 +527,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingBottom: 60,
+    paddingBottom: 100,
     maxWidth: 760,
     width: "100%",
     alignSelf: "center",
+  },
+  sectionAnchor: {
+    marginTop: 10,
   },
   title: {
     fontSize: 26,
@@ -350,15 +564,50 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
+  warnBanner: {
+    backgroundColor: "#F8D7DA",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  warnText: {
+    color: "#842029",
+    fontSize: 13,
+    lineHeight: 19,
+  },
   error: {
     color: "#C94B4B",
     textAlign: "center",
     marginBottom: 8,
   },
+  slowHint: {
+    color: "#999",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
+  toolbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginBottom: 10,
+  },
+  fetchedAt: {
+    fontSize: 11,
+    color: "#999",
+  },
+  refreshBtn: {
+    backgroundColor: "#E8DDCE",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
   chipsRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   chip: {
     flex: 1,
@@ -376,6 +625,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#999",
     fontWeight: "600",
+  },
+  navRow: {
+    flexDirection: "row",
+    gap: 6,
+    flexWrap: "wrap",
+    marginBottom: 14,
+  },
+  navBtn: {
+    backgroundColor: "#6B543F",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  navBtnText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
   },
   input: {
     borderWidth: 1,
@@ -462,5 +728,28 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
     marginTop: 8,
+  },
+  capNote: {
+    color: "#999",
+    fontSize: 11,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 6,
+  },
+  fab: {
+    position: "absolute",
+    right: 24,
+    bottom: 24,
+    backgroundColor: "#C5A582",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.25)",
+  },
+  fabText: {
+    fontSize: 20,
+    color: "#fff",
   },
 });

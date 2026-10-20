@@ -20,6 +20,7 @@ import { generateSpanishCard } from "../utils/bingoCard";
 import ParticipantsModal from "../components/BingoParticipantsModal";
 import BingoWinModal from "../components/BingoWinModal";
 import { API_CONFIG } from '../constants/api';
+import { apiFetch } from '../services/auth';
 
 type Role = "viewer" | "mod" | "streamer";
 
@@ -164,7 +165,7 @@ RAFFLE
 
     const token = await getToken();
 
-    await fetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
+    await apiFetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -184,7 +185,7 @@ RAFFLE
   const stopRaffle = async () => {
     const token = await getToken();
 
-    const res = await fetch(
+    const res = await apiFetch(
       API_CONFIG.ENDPOINTS.RAFFLE_STOP,
       {
         method: "POST",
@@ -235,7 +236,7 @@ GET SUBS
 
     const token = await getToken();
 
-    const res = await fetch(
+    const res = await apiFetch(
       API_CONFIG.ENDPOINTS.SUBS,
       {
         method: "POST",

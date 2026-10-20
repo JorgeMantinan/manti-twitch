@@ -20,7 +20,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { getSessionId } from "../utils/session";
 import { API_CONFIG } from "../constants/api";
-import { decodeToken } from "../services/auth";
+import { apiFetch, decodeToken } from "../services/auth";
 import WheelSvg, { WheelSlice } from "../components/roulette/WheelSvg";
 import BingoWinModal from "../components/BingoWinModal";
 
@@ -641,7 +641,7 @@ export default function SmartRoulette() {
         return;
       }
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `${API_CONFIG.ENDPOINTS.AVATARS}?logins=${encodeURIComponent(logins.slice(0, 100).join(","))}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
@@ -673,7 +673,7 @@ export default function SmartRoulette() {
       const token = await getToken();
       if (!token || !alive) return;
       try {
-        const res = await fetch(API_CONFIG.ENDPOINTS.FOLLOWERS, {
+        const res = await apiFetch(API_CONFIG.ENDPOINTS.FOLLOWERS, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1159,7 +1159,7 @@ export default function SmartRoulette() {
 
     const token = await getToken();
 
-    await fetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
+    await apiFetch(API_CONFIG.ENDPOINTS.RAFFLE_START, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1184,7 +1184,7 @@ export default function SmartRoulette() {
 
     const token = await getToken();
 
-    const res = await fetch(API_CONFIG.ENDPOINTS.RAFFLE_STOP, {
+    const res = await apiFetch(API_CONFIG.ENDPOINTS.RAFFLE_STOP, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -1219,7 +1219,7 @@ export default function SmartRoulette() {
 
     const token = await getToken();
 
-    const res = await fetch(API_CONFIG.ENDPOINTS.SUBS, {
+    const res = await apiFetch(API_CONFIG.ENDPOINTS.SUBS, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1284,7 +1284,7 @@ export default function SmartRoulette() {
     } else {
       const token = await getToken();
 
-      const res = await fetch(API_CONFIG.ENDPOINTS.PICK_WINNER, {
+      const res = await apiFetch(API_CONFIG.ENDPOINTS.PICK_WINNER, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

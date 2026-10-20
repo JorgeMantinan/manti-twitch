@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Platform, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_CONFIG } from '../constants/api';
+import { apiFetch } from '../services/auth';
 
 interface Subscriber {
   user_name: string;
@@ -70,7 +71,7 @@ const MySubs = () => {
         return;
       }
 
-      const response = await fetch(
+      const response = await apiFetch(
         API_CONFIG.ENDPOINTS.SUBS,
         {
           method: 'POST',

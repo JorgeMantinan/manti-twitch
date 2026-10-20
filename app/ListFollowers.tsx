@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_CONFIG } from '../constants/api';
+import { apiFetch } from '../services/auth';
 
 interface Follower {
   user_name: string;
@@ -100,7 +101,7 @@ const ListFollowers = () => {
         return;
       }
 
-      const response = await fetch(API_CONFIG.ENDPOINTS.FOLLOWERS, {
+      const response = await apiFetch(API_CONFIG.ENDPOINTS.FOLLOWERS, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
