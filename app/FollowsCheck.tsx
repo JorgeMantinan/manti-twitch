@@ -96,68 +96,132 @@ export default function FollowsCheck() {
 
     const slowTimer = setTimeout(() => setSlowHint(true), 4000);
 
-    try {
-      const [fRes, frRes] = await Promise.all([
-        apiFetch(API_CONFIG.ENDPOINTS.FOLLOWINGS, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        apiFetch(API_CONFIG.ENDPOINTS.FOLLOWERS_MY, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+    let scopeProblem = false;
+    let fData: any = null;
+    let frData: any = null;
+    const problems: string[] = [];
 
-      if (fRes.status === 403 || frRes.status === 403) {
+    const parseJson = async (r: Response) => {
+      try {
+        return await r.json();
+      } catch {
+        return null;
+      }
+    };
+
+    // Each list loads independently: one failing must not hide the other
+    const loadFollowings = apiFetch(API_CONFIG.ENDPOINTS.FOLLOWINGS)
+      .then(async (r) => {
+        if (r.status === 403) {
+          scopeProblem = true;
+          return;
+        }
+        if (!r.ok) {
+          problems.push("siguiendo");
+          return;
+        }
+        const d = await parseJson(r);
+        if (!d || !Array.isArray(d.followings)) {
+          problems.push("siguiendo (respuesta vacía)");
+          return;
+        }
+        fData = d;
+      })
+      .catch(() => problems.push("siguiendo (sin conexión)"));
+
+    const loadFollowers = apiFetch(API_CONFIG.ENDPOINTS.FOLLOWERS_MY)
+      .then(async (r) => {
+        if (r.status === 403) {
+          scopeProblem = true;
+          return;
+        }
+        if (!r.ok) {
+          problems.push("seguidores");
+          return;
+        }
+        const d = await parseJson(r);
+        if (!d || !Array.isArray(d.followers)) {
+          problems.push("seguidores (respuesta vacía)");
+          return;
+        }
+        frData = d;
+      })
+      .catch(() => problems.push("seguidores (sin conexión)"));
+
+    await Promise.all([loadFollowings, loadFollowers]);
+    clearTimeout(slowTimer);
+    setSlowHint(false);
+
+    try {
+      if (scopeProblem) {
         setNeedsScope(true);
         return;
       }
-      if (!fRes.ok || !frRes.ok) {
+
+      if (fData && frData) {
+        const cache: FollowCache = {
+          at: Date.now(),
+          followings: fData.followings.map((r: any) => ({
+            login: String(r.login || "").toLowerCase(),
+            name: r.name || r.login,
+          })),
+          followers: frData.followers.map((r: any) => ({
+            login: String(r.login || "").toLowerCase(),
+            name: r.name || r.login,
+            at: r.at,
+          })),
+          truncatedFollowings: !!fData.truncated,
+          truncatedFollowers: !!frData.truncated,
+          totalFollowings: typeof fData.total === "number" ? fData.total : null,
+          totalFollowers: typeof frData.total === "number" ? frData.total : null,
+        };
+        applyData(cache);
+        if (Platform.OS === "web") {
+          try {
+            localStorage.setItem(FOLLOW_CACHE_KEY, JSON.stringify(cache));
+          } catch {}
+        }
+      } else if (fData || frData) {
+        // Partial success: show whatever loaded
+        if (fData) {
+          setFollowings(
+            fData.followings.map((r: any) => ({
+              login: String(r.login || "").toLowerCase(),
+              name: r.name || r.login,
+            })),
+          );
+        }
+        if (frData) {
+          setFollowers(
+            frData.followers.map((r: any) => ({
+              login: String(r.login || "").toLowerCase(),
+              name: r.name || r.login,
+              at: r.at,
+            })),
+          );
+        }
+        setTruncated({
+          followings: !!fData?.truncated,
+          followers: !!frData?.truncated,
+          totalFollowings: typeof fData?.total === "number" ? fData.total : null,
+          totalFollowers: typeof frData?.total === "number" ? frData.total : null,
+        });
+        setLastFetch(Date.now());
+        setError(
+          `No se pudo cargar: ${[...new Set(problems)].join(" · ")} — prueba a REFRESCAR en unos segundos`,
+        );
+      } else {
         const stale = readFollowCache();
         if (stale) {
           applyData(stale);
           setError("No se pudo actualizar — mostrando datos guardados");
         } else {
-          setError("Error cargando las listas de Twitch");
+          setError(
+            `Error cargando las listas (${[...new Set(problems)].join(" · ")}) — si continúa, cierra sesión y vuelve a entrar con Twitch`,
+          );
         }
-        return;
-      }
-
-      const fData = await fRes.json();
-      const frData = await frRes.json();
-
-      const cache: FollowCache = {
-        at: Date.now(),
-        followings: (fData.followings || []).map((r: any) => ({
-          login: String(r.login || "").toLowerCase(),
-          name: r.name || r.login,
-        })),
-        followers: (frData.followers || []).map((r: any) => ({
-          login: String(r.login || "").toLowerCase(),
-          name: r.name || r.login,
-          at: r.at,
-        })),
-        truncatedFollowings: !!fData.truncated,
-        truncatedFollowers: !!frData.truncated,
-        totalFollowings: typeof fData.total === "number" ? fData.total : null,
-        totalFollowers: typeof frData.total === "number" ? frData.total : null,
-      };
-
-      applyData(cache);
-      if (Platform.OS === "web") {
-        try {
-          localStorage.setItem(FOLLOW_CACHE_KEY, JSON.stringify(cache));
-        } catch {}
-      }
-    } catch {
-      const stale = readFollowCache();
-      if (stale) {
-        applyData(stale);
-        setError("No se pudo conectar — mostrando datos guardados");
-      } else {
-        setError("No se pudo conectar con el servidor");
       }
     } finally {
-      clearTimeout(slowTimer);
-      setSlowHint(false);
       setLoading(false);
       setRefreshing(false);
     }
