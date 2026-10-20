@@ -299,6 +299,13 @@ export default function FollowsCheck() {
     [followers, followingsSet],
   );
 
+  // People you follow who also follow you back — same count shown as
+  // "ME SIGUE" badges in "A los que sigo" AND "LO SIGO" in "Me siguen".
+  const mutuals = useMemo(
+    () => followings.filter((f) => followersSet.has(f.login)).length,
+    [followings, followersSet],
+  );
+
   const sortedFollowings = useMemo(() => {
     const rows = [...followings];
     if (sortMode === "az") {
@@ -423,7 +430,17 @@ export default function FollowsCheck() {
                 </Text>
                 <Text style={styles.chipLabel}>Fans sin seguir</Text>
               </TouchableOpacity>
+              <View style={styles.chip}>
+                <Text style={[styles.chipNum, { color: "#E85D9C" }]}>{mutuals}</Text>
+                <Text style={styles.chipLabel}>Mutuos</Text>
+              </View>
             </View>
+
+            <Text style={styles.badgeHint}>
+              Los badges rosas (ME SIGUE / LO SIGO) marcan a quien le sigues y
+              él también te sigue a ti — el chip «Mutuos» cuenta exactamente a
+              esos.
+            </Text>
 
             <View style={styles.navRow}>
               {(["sec-sigo", "sec-siguen", "sec-fans"] as const).map((id, i) => (
@@ -689,6 +706,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#999",
     fontWeight: "600",
+  },
+  badgeHint: {
+    fontSize: 12,
+    color: "#8A7A66",
+    textAlign: "center",
+    marginBottom: 12,
+    lineHeight: 17,
   },
   navRow: {
     flexDirection: "row",
