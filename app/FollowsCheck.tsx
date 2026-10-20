@@ -16,36 +16,63 @@ import { API_CONFIG } from "../constants/api";
 import { decodeToken } from "../services/auth";
 
 type FollowRow = { login: string; name: string; at?: string };
+type SortMode = "az" | "meSigue" | "noMeSigue";
+
+const SORT_CYCLE: Record<SortMode, SortMode> = {
+  az: "meSigue",
+  meSigue: "noMeSigue",
+  noMeSigue: "az",
+};
+
+const SORT_LABEL: Record<SortMode, string> = {
+  az: "ORDEN: A-Z",
+  meSigue: "ORDEN: ME SIGUE",
+  noMeSigue: "ORDEN: NO ME SIGUE",
+};
 
 export default function FollowsCheck() {
   const router = useRouter();
 
+  const [token, setToken] = useState<string | null>(null);
   const [followings, setFollowings] = useState<FollowRow[]>([]);
   const [followers, setFollowers] = useState<FollowRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [needsScope, setNeedsScope] = useState(false);
+  const [needsUnfollowScope, setNeedsUnfollowScope] = useState(false);
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState<"sigo" | "fans" | null>(null);
+
+  const [sortMode, setSortMode] = useState<SortMode>("az");
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const token =
+      const t =
         Platform.OS === "web"
           ? localStorage.getItem("userToken")
           : await SecureStore.getItemAsync("userToken");
-      if (!token) {
+      if (!t) {
         router.replace("/");
         return;
       }
+      setToken(t);
 
-      const decoded = decodeToken(token);
+      const decoded = decodeToken(t);
       const scopes: string[] = Array.isArray(decoded?.scopes)
         ? decoded.scopes
         : typeof decoded?.scopes === "string"
           ? String(decoded.scopes).split(" ")
           : [];
+
+      const canUnfollow = scopes.includes("user:edit:follows");
+      if (alive) setNeedsUnfollowScope(!canUnfollow);
+
       if (!scopes.includes("user:read:follows")) {
         if (alive) {
           setNeedsScope(true);
@@ -57,10 +84,10 @@ export default function FollowsCheck() {
       try {
         const [fRes, frRes] = await Promise.all([
           fetch(API_CONFIG.ENDPOINTS.FOLLOWINGS, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${t}` },
           }),
           fetch(API_CONFIG.ENDPOINTS.FOLLOWERS_MY, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${t}` },
           }),
         ]);
 
@@ -120,9 +147,27 @@ export default function FollowsCheck() {
     [followers, followingsSet],
   );
 
-  const sortedFollowings = useMemo(
-    () => [...followings].sort((a, b) => a.login.localeCompare(b.login)),
-    [followings],
+  const sortedFollowings = useMemo(() => {
+    const rows = [...followings];
+    if (sortMode === "az") {
+      rows.sort((a, b) => a.login.localeCompare(b.login));
+    } else if (sortMode === "meSigue") {
+      rows.sort((a, b) => {
+        const d = Number(followersSet.has(b.login)) - Number(followersSet.has(a.login));
+        return d !== 0 ? d : a.login.localeCompare(b.login);
+      });
+    } else {
+      rows.sort((a, b) => {
+        const d = Number(followersSet.has(a.login)) - Number(followersSet.has(b.login));
+        return d !== 0 ? d : a.login.localeCompare(b.login);
+      });
+    }
+    return rows;
+  }, [followings, followersSet, sortMode]);
+
+  const noFollowBackInView = useMemo(
+    () => sortedFollowings.filter((f) => !followersSet.has(f.login)),
+    [sortedFollowings, followersSet],
   );
 
   const query = search.trim().toLowerCase();
@@ -148,6 +193,91 @@ export default function FollowsCheck() {
     }
   };
 
+  const confirmAsk = (msg: string) =>
+    Platform.OS === "web" ? window.confirm(msg) : true;
+
+  const unfollowRequest = async (login: string): Promise<boolean> => {
+    if (!token) return false;
+    const res = await fetch(API_CONFIG.ENDPOINTS.UNFOLLOW, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ login }),
+    });
+    if (res.ok) {
+      setFollowings((prev) => prev.filter((f) => f.login !== login));
+      return true;
+    }
+    const data = await res.json().catch(() => ({} as any));
+    const msg =
+      res.status === 403
+        ? "Falta el permiso para dejar de seguir — vuelve a entrar con Twitch"
+        : data.error || "No se pudo dejar de seguir";
+    setError(msg);
+    return false;
+  };
+
+  const unfollowOne = async (login: string) => {
+    if (busy) return;
+    if (!confirmAsk(`¿Dejar de seguir a @${login}?`)) return;
+    setBusy(true);
+    setInfo("");
+    setError("");
+    try {
+      await unfollowRequest(login);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleSelect = (login: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(login)) next.delete(login);
+      else next.add(login);
+      return next;
+    });
+  };
+
+  const selectAllNoFollowBack = () => {
+    setSelected(new Set(noFollowBackInView.map((f) => f.login)));
+  };
+
+  const unfollowSelected = async () => {
+    if (busy || selected.size === 0) return;
+    const logins = [...selected];
+    if (!confirmAsk(`¿Dejar de seguir a ${logins.length} personas?`)) return;
+
+    setBusy(true);
+    setError("");
+    setInfo("");
+    let done = 0;
+    let failed = 0;
+
+    for (const login of logins) {
+      try {
+        const ok = await unfollowRequest(login);
+        if (ok) done++;
+        else {
+          failed++;
+          // stop early on hard errors (scope / rate limit)
+          if (failed >= 2) break;
+        }
+      } catch {
+        failed++;
+      }
+      setProgress(`${Math.min(done + failed, logins.length)}/${logins.length}`);
+      await new Promise((r) => setTimeout(r, 400));
+    }
+
+    setSelected(new Set());
+    setProgress("");
+    setBusy(false);
+    setInfo(`Hechos: ${done}${failed ? ` · Fallidos: ${failed}` : ""}`);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -165,7 +295,20 @@ export default function FollowsCheck() {
           </View>
         )}
 
+        {!needsScope && needsUnfollowScope && (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>
+              Para dejar de seguir desde esta pantalla falta un permiso de
+              Twitch. Cierra sesión y vuelve a entrar con Twitch para concederlo.
+            </Text>
+            <TouchableOpacity style={styles.loginButton} onPress={relogin}>
+              <Text style={styles.buttonText}>Volver a entrar con Twitch</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {!!error && <Text style={styles.error}>{error}</Text>}
+        {!!info && <Text style={styles.info}>{info}</Text>}
 
         {loading && !needsScope && (
           <ActivityIndicator size="large" color="#C5A582" style={{ marginTop: 40 }} />
@@ -186,7 +329,7 @@ export default function FollowsCheck() {
               </View>
               <View style={styles.chip}>
                 <Text style={[styles.chipNum, { color: "#C94B4B" }]}>
-                  {notFollowedBack.length}
+                  {noFollowBackInView.length}
                 </Text>
                 <Text style={styles.chipLabel}>Fans sin seguir</Text>
               </View>
@@ -203,19 +346,81 @@ export default function FollowsCheck() {
               <Text style={styles.sectionTitle}>
                 A los que sigo ({followings.length})
               </Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyList(filterRows(sortedFollowings), "sigo")}
-              >
-                <Text style={styles.copyText}>
-                  {copied === "sigo" ? "COPIADO ✓" : "COPIAR"}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.headerButtons}>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => setSortMode((m) => SORT_CYCLE[m])}
+                >
+                  <Text style={styles.copyText}>{SORT_LABEL[sortMode]}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => copyList(filterRows(sortedFollowings), "sigo")}
+                >
+                  <Text style={styles.copyText}>
+                    {copied === "sigo" ? "COPIADO ✓" : "COPIAR"}
+                  </Text>
+                </TouchableOpacity>
+                {!needsUnfollowScope && (
+                  <TouchableOpacity
+                    style={[styles.copyButton, selectionMode && styles.copyButtonActive]}
+                    onPress={() => {
+                      setSelectionMode((v) => !v);
+                      setSelected(new Set());
+                    }}
+                  >
+                    <Text
+                      style={[styles.copyText, selectionMode && styles.copyTextActive]}
+                    >
+                      {selectionMode ? "SALIR" : "SELECCIÓN"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
+
+            {selectionMode && (
+              <View style={styles.bulkBar}>
+                <TouchableOpacity style={styles.copyButton} onPress={selectAllNoFollowBack}>
+                  <Text style={styles.copyText}>
+                    TODOS ({noFollowBackInView.length})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => setSelected(new Set())}
+                >
+                  <Text style={styles.copyText}>NINGUNO</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.bulkUnfollowButton,
+                    (busy || selected.size === 0) && { opacity: 0.5 },
+                  ]}
+                  disabled={busy || selected.size === 0}
+                  onPress={unfollowSelected}
+                >
+                  <Text style={styles.bulkUnfollowText}>
+                    {busy && progress
+                      ? `DEJANDO ${progress}…`
+                      : `DEJAR DE SEGUIR (${selected.size})`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {filterRows(sortedFollowings).map((f) => {
               const followsMe = followersSet.has(f.login);
+              const isSelectable = selectionMode && !followsMe;
               return (
                 <View key={f.login} style={styles.row}>
+                  {isSelectable && (
+                    <TouchableOpacity onPress={() => toggleSelect(f.login)}>
+                      <Text style={styles.checkbox}>
+                        {selected.has(f.login) ? "☑️" : "⬜"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                   <View style={styles.rowNames}>
                     <Text style={styles.rowName}>{f.name}</Text>
                     <Text style={styles.rowLogin}>@{f.login}</Text>
@@ -228,6 +433,15 @@ export default function FollowsCheck() {
                   >
                     {followsMe ? "ME SIGUE" : "NO ME SIGUE"}
                   </Text>
+                  {!followsMe && !selectionMode && !needsUnfollowScope && (
+                    <TouchableOpacity
+                      style={[styles.rowUnfollow, busy && { opacity: 0.5 }]}
+                      disabled={busy}
+                      onPress={() => unfollowOne(f.login)}
+                    >
+                      <Text style={styles.rowUnfollowText}>DEJAR</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               );
             })}
@@ -315,7 +529,13 @@ const styles = StyleSheet.create({
   error: {
     color: "#C94B4B",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  info: {
+    color: "#4CAF50",
+    textAlign: "center",
+    marginBottom: 8,
+    fontWeight: "600",
   },
   chipsRow: {
     flexDirection: "row",
@@ -353,6 +573,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
     marginTop: 8,
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 6,
+    flexWrap: "wrap",
   },
   sectionTitle: {
     fontSize: 16,
@@ -365,10 +592,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
+  copyButtonActive: {
+    backgroundColor: "#C5A582",
+  },
   copyText: {
     fontSize: 11,
     fontWeight: "700",
     color: "#6B543F",
+  },
+  copyTextActive: {
+    color: "#fff",
+  },
+  bulkBar: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 8,
+    flexWrap: "wrap",
+  },
+  bulkUnfollowButton: {
+    backgroundColor: "#C94B4B",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    flex: 1,
+    minWidth: 160,
+    alignItems: "center",
+  },
+  bulkUnfollowText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
   },
   row: {
     flexDirection: "row",
@@ -379,6 +636,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     marginBottom: 5,
+    gap: 8,
   },
   rowNames: {
     flex: 1,
@@ -410,6 +668,20 @@ const styles = StyleSheet.create({
   },
   badgeNot: {
     backgroundColor: "#C94B4B",
+  },
+  rowUnfollow: {
+    backgroundColor: "#C94B4B",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  rowUnfollowText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  checkbox: {
+    fontSize: 16,
   },
   empty: {
     color: "#999",

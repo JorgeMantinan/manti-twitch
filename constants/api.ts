@@ -28,5 +28,6 @@ export const API_CONFIG = {
     AVATARS: `${BASE_URL}/api/twitch/avatars`,
     FOLLOWINGS: `${BASE_URL}/api/twitch/followings`,
     FOLLOWERS_MY: `${BASE_URL}/api/twitch/followers`,
+    UNFOLLOW: `${BASE_URL}/api/twitch/unfollow`,
   }
 };
