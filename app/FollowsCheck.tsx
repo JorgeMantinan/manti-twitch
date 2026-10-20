@@ -16,19 +16,6 @@ import { API_CONFIG } from "../constants/api";
 import { apiFetch, decodeToken } from "../services/auth";
 
 type FollowRow = { login: string; name: string; at?: string };
-type SortMode = "az" | "meSigue" | "noMeSigue";
-
-const SORT_CYCLE: Record<SortMode, SortMode> = {
-  az: "meSigue",
-  meSigue: "noMeSigue",
-  noMeSigue: "az",
-};
-
-const SORT_LABEL: Record<SortMode, string> = {
-  az: "ORDEN: A-Z",
-  meSigue: "ORDEN: ME SIGUE",
-  noMeSigue: "ORDEN: NO ME SIGUE",
-};
 
 const FOLLOW_CACHE_KEY = "followscheck_cache_v1";
 const FOLLOW_CACHE_TTL = 5 * 60 * 1000;
@@ -66,8 +53,7 @@ export default function FollowsCheck() {
   const [error, setError] = useState("");
   const [needsScope, setNeedsScope] = useState(false);
   const [search, setSearch] = useState("");
-  const [copied, setCopied] = useState<"sigo" | "siguen" | "fans" | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>("az");
+  const [copied, setCopied] = useState<"sigoNo" | "fans" | "mutuos" | null>(null);
   const [lastFetch, setLastFetch] = useState<number | null>(null);
   const [truncated, setTruncated] = useState<{
     followings: boolean;
@@ -291,42 +277,30 @@ export default function FollowsCheck() {
     [followers],
   );
 
-  const notFollowedBack = useMemo(
+  const sortedFollowings = useMemo(
+    () => [...followings].sort((a, b) => a.login.localeCompare(b.login)),
+    [followings],
+  );
+
+  // 1) I follow them, they don't follow me back
+  const sigoNoMeSiguen = useMemo(
+    () => sortedFollowings.filter((f) => !followersSet.has(f.login)),
+    [sortedFollowings, followersSet],
+  );
+
+  // 3) Mutual follows
+  const mutualsList = useMemo(
+    () => sortedFollowings.filter((f) => followersSet.has(f.login)),
+    [sortedFollowings, followersSet],
+  );
+
+  // 2) They follow me, I don't follow them back
+  const fansSinSeguir = useMemo(
     () =>
       followers
         .filter((f) => !followingsSet.has(f.login))
         .sort((a, b) => a.login.localeCompare(b.login)),
     [followers, followingsSet],
-  );
-
-  // People you follow who also follow you back — same count shown as
-  // "ME SIGUE" badges in "A los que sigo" AND "LO SIGO" in "Me siguen".
-  const mutuals = useMemo(
-    () => followings.filter((f) => followersSet.has(f.login)).length,
-    [followings, followersSet],
-  );
-
-  const sortedFollowings = useMemo(() => {
-    const rows = [...followings];
-    if (sortMode === "az") {
-      rows.sort((a, b) => a.login.localeCompare(b.login));
-    } else if (sortMode === "meSigue") {
-      rows.sort((a, b) => {
-        const d = Number(followersSet.has(b.login)) - Number(followersSet.has(a.login));
-        return d !== 0 ? d : a.login.localeCompare(b.login);
-      });
-    } else {
-      rows.sort((a, b) => {
-        const d = Number(followersSet.has(a.login)) - Number(followersSet.has(b.login));
-        return d !== 0 ? d : a.login.localeCompare(b.login);
-      });
-    }
-    return rows;
-  }, [followings, followersSet, sortMode]);
-
-  const sortedFollowers = useMemo(
-    () => [...followers].sort((a, b) => a.login.localeCompare(b.login)),
-    [followers],
   );
 
   const query = search.trim().toLowerCase();
@@ -339,7 +313,10 @@ export default function FollowsCheck() {
 
   const capRows = (rows: FollowRow[]) => rows.slice(0, RENDER_CAP);
 
-  const copyList = async (rows: FollowRow[], key: "sigo" | "siguen" | "fans") => {
+  const copyList = async (
+    rows: FollowRow[],
+    key: "sigoNo" | "fans" | "mutuos",
+  ) => {
     if (Platform.OS !== "web") return;
     try {
       await navigator.clipboard.writeText(rows.map((r) => r.login).join("\n"));
@@ -416,41 +393,46 @@ export default function FollowsCheck() {
             </View>
 
             <View style={styles.chipsRow}>
-              <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-sigo")}>
-                <Text style={styles.chipNum}>{followings.length}</Text>
-                <Text style={styles.chipLabel}>A los que sigo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-siguen")}>
-                <Text style={styles.chipNum}>{followers.length}</Text>
-                <Text style={styles.chipLabel}>Me siguen</Text>
+              <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-sigo-no")}>
+                <Text style={[styles.chipNum, { color: "#C94B4B" }]}>
+                  {sigoNoMeSiguen.length}
+                </Text>
+                <Text style={styles.chipLabel}>Sigo, no me siguen</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-fans")}>
                 <Text style={[styles.chipNum, { color: "#C94B4B" }]}>
-                  {notFollowedBack.length}
+                  {fansSinSeguir.length}
                 </Text>
-                <Text style={styles.chipLabel}>Fans sin seguir</Text>
+                <Text style={styles.chipLabel}>Me siguen, no los sigo</Text>
               </TouchableOpacity>
-              <View style={styles.chip}>
-                <Text style={[styles.chipNum, { color: "#E85D9C" }]}>{mutuals}</Text>
+              <TouchableOpacity style={styles.chip} onPress={() => jumpTo("sec-mutuos")}>
+                <Text style={[styles.chipNum, { color: "#E85D9C" }]}>
+                  {mutualsList.length}
+                </Text>
                 <Text style={styles.chipLabel}>Mutuos</Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.badgeHint}>
-              Los badges rosas (ME SIGUE / LO SIGO) marcan a quien le sigues y
-              él también te sigue a ti — el chip «Mutuos» cuenta exactamente a
-              esos.
+              Las3 listas son exclusivas entre sí. Totales: sigues a{" "}
+              {followings.length} · te siguen {followers.length}.
             </Text>
 
             <View style={styles.navRow}>
-              {(["sec-sigo", "sec-siguen", "sec-fans"] as const).map((id, i) => (
+              {(["sec-sigo-no", "sec-fans", "sec-mutuos"] as const).map((id, i) => (
                 <TouchableOpacity
                   key={id}
                   style={styles.navBtn}
                   onPress={() => jumpTo(id)}
                 >
                   <Text style={styles.navBtnText}>
-                    {["IR A: SIGUIENDO", "IR A: ME SIGUEN", "IR A: FANS"][i]}
+                    {
+                      [
+                        "IR A: SIGO SIN QUE ME SIGAN",
+                        "IR A: ME SIGUEN SIN QUE LOS SIGA",
+                        "IR A: MUTUOS",
+                      ][i]
+                    }
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -466,85 +448,37 @@ export default function FollowsCheck() {
               style={styles.input}
             />
 
-            {/* SECTION: a los que sigo */}
-            <View nativeID="sec-sigo" style={styles.sectionAnchor}>
+            {/* SECTION 1: sigo y no me siguen */}
+            <View nativeID="sec-sigo-no" style={styles.sectionAnchor}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>
-                  A los que sigo ({followings.length})
-                </Text>
-                <View style={styles.headerButtons}>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    onPress={() => setSortMode((m) => SORT_CYCLE[m])}
-                  >
-                    <Text style={styles.copyText}>{SORT_LABEL[sortMode]}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    onPress={() => copyList(filterRows(sortedFollowings), "sigo")}
-                  >
-                    <Text style={styles.copyText}>
-                      {copied === "sigo" ? "COPIADO ✓" : "COPIAR"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {capRows(filterRows(sortedFollowings)).map((f) => {
-                const followsMe = followersSet.has(f.login);
-                return (
-                  <View key={f.login} style={styles.row}>
-                    <View style={styles.rowNames}>
-                      <Text style={styles.rowName}>{f.name}</Text>
-                      <Text style={styles.rowLogin}>@{f.login}</Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.badge,
-                        followsMe ? styles.badgeFollowed : styles.badgeNot,
-                      ]}
-                    >
-                      {followsMe ? "ME SIGUE" : "NO ME SIGUE"}
-                    </Text>
-                  </View>
-                );
-              })}
-              {filterRows(sortedFollowings).length > RENDER_CAP && (
-                <Text style={styles.capNote}>
-                  Mostrando los primeros {RENDER_CAP} — usa la búsqueda o COPIAR
-                  para el resto
-                </Text>
-              )}
-            </View>
-
-            {/* SECTION: me siguen */}
-            <View nativeID="sec-siguen" style={styles.sectionAnchor}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  Me siguen ({followers.length})
+                  A los que sigo y no me siguen ({sigoNoMeSiguen.length})
                 </Text>
                 <TouchableOpacity
                   style={styles.copyButton}
-                  onPress={() => copyList(filterRows(sortedFollowers), "siguen")}
+                  onPress={() => copyList(filterRows(sigoNoMeSiguen), "sigoNo")}
                 >
                   <Text style={styles.copyText}>
-                    {copied === "siguen" ? "COPIADO ✓" : "COPIAR"}
+                    {copied === "sigoNo" ? "COPIADO ✓" : "COPIAR"}
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              {capRows(filterRows(sortedFollowers)).map((f) => (
+              {capRows(filterRows(sigoNoMeSiguen)).map((f) => (
                 <View key={f.login} style={styles.row}>
                   <View style={styles.rowNames}>
                     <Text style={styles.rowName}>{f.name}</Text>
                     <Text style={styles.rowLogin}>@{f.login}</Text>
                   </View>
-                  {followingsSet.has(f.login) ? (
-                    <Text style={[styles.badge, styles.badgeFollowed]}>LO SIGO</Text>
-                  ) : null}
+                  <Text style={[styles.badge, styles.badgeNot]}>NO ME SIGUE</Text>
                 </View>
               ))}
-              {filterRows(sortedFollowers).length > RENDER_CAP && (
+              {filterRows(sigoNoMeSiguen).length === 0 && (
+                <Text style={styles.empty}>
+                  {query ? "Sin coincidencias" : "Te siguen todos los que sigues 🎉"}
+                </Text>
+              )}
+              {filterRows(sigoNoMeSiguen).length > RENDER_CAP && (
                 <Text style={styles.capNote}>
                   Mostrando los primeros {RENDER_CAP} — usa la búsqueda o COPIAR
                   para el resto
@@ -552,15 +486,15 @@ export default function FollowsCheck() {
               )}
             </View>
 
-            {/* SECTION: fans sin seguir */}
+            {/* SECTION 2: me siguen y no los sigo */}
             <View nativeID="sec-fans" style={styles.sectionAnchor}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>
-                  Te siguen y no los sigo ({notFollowedBack.length})
+                  Te siguen y no los sigo ({fansSinSeguir.length})
                 </Text>
                 <TouchableOpacity
                   style={styles.copyButton}
-                  onPress={() => copyList(filterRows(notFollowedBack), "fans")}
+                  onPress={() => copyList(filterRows(fansSinSeguir), "fans")}
                 >
                   <Text style={styles.copyText}>
                     {copied === "fans" ? "COPIADO ✓" : "COPIAR"}
@@ -568,7 +502,7 @@ export default function FollowsCheck() {
                 </TouchableOpacity>
               </View>
 
-              {capRows(filterRows(notFollowedBack)).map((f) => (
+              {capRows(filterRows(fansSinSeguir)).map((f) => (
                 <View key={f.login} style={styles.row}>
                   <View style={styles.rowNames}>
                     <Text style={styles.rowName}>{f.name}</Text>
@@ -581,10 +515,53 @@ export default function FollowsCheck() {
                   ) : null}
                 </View>
               ))}
-
-              {filterRows(notFollowedBack).length === 0 && (
+              {filterRows(fansSinSeguir).length === 0 && (
                 <Text style={styles.empty}>
                   {query ? "Sin coincidencias" : "Sigues a todo el que te sigue 🎉"}
+                </Text>
+              )}
+              {filterRows(fansSinSeguir).length > RENDER_CAP && (
+                <Text style={styles.capNote}>
+                  Mostrando los primeros {RENDER_CAP} — usa la búsqueda o COPIAR
+                  para el resto
+                </Text>
+              )}
+            </View>
+
+            {/* SECTION 3: mutuos */}
+            <View nativeID="sec-mutuos" style={styles.sectionAnchor}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Nos seguimos mutuamente ({mutualsList.length})
+                </Text>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => copyList(filterRows(mutualsList), "mutuos")}
+                >
+                  <Text style={styles.copyText}>
+                    {copied === "mutuos" ? "COPIADO ✓" : "COPIAR"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {capRows(filterRows(mutualsList)).map((f) => (
+                <View key={f.login} style={styles.row}>
+                  <View style={styles.rowNames}>
+                    <Text style={styles.rowName}>{f.name}</Text>
+                    <Text style={styles.rowLogin}>@{f.login}</Text>
+                  </View>
+                  <Text style={[styles.badge, styles.badgeFollowed]}>MUTUO</Text>
+                </View>
+              ))}
+              {filterRows(mutualsList).length === 0 && (
+                <Text style={styles.empty}>
+                  {query ? "Sin coincidencias" : "Todavía no hay seguimientos mutuos"}
+                </Text>
+              )}
+              {filterRows(mutualsList).length > RENDER_CAP && (
+                <Text style={styles.capNote}>
+                  Mostrando los primeros {RENDER_CAP} — usa la búsqueda o COPIAR
+                  para el resto
                 </Text>
               )}
             </View>
