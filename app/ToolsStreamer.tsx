@@ -47,6 +47,7 @@ const STREAMER_TOOLS = [
     // { id: '6', title: 'Ganadores Sorteos', route: '/Streamer/Winners', icon: 'trophy-outline' },
     // { id: '7', title: 'Historial Subs', route: '/Streamer/SubsHistory', icon: 'history' },
     { id: '8', title: 'Suscriptores actuales', route: '/MySubs', icon: 'account-star' },
+    { id: '9', title: 'Siguiendo y fans', route: '/FollowsCheck', icon: 'account-multiple-outline' },
 ];
 
 export default function ToolsStreamer() {
