@@ -16,7 +16,7 @@ describe('Roulette new features', () => {
     cy.contains('Participants (3)').should('exist');
     cy.wait(1200);
 
-    cy.get('[placeholder="Premios (uno por línea)"]').type(
+    cy.typeIn('[placeholder="Premios (uno por línea)"]', 
       'Sub 1 mes{enter}Bollo de pan{enter}Sub 2 meses',
     );
 
@@ -54,8 +54,8 @@ describe('Roulette new features', () => {
     cy.wait(1200);
 
     cy.contains('DUELO').click({ scrollBehavior: false });
-    cy.get('[placeholder="Jugador A"]').type('Alice');
-    cy.get('[placeholder="Jugador B"]').type('Bob');
+    cy.typeIn('[placeholder="Jugador A"]', 'Alice');
+    cy.typeIn('[placeholder="Jugador B"]', 'Bob');
 
     cy.contains('GIRAR RULETA', { scrollBehavior: false }).click({ scrollBehavior: false });
     cy.contains('🏆', { timeout: 15000, scrollBehavior: false }).should('be.visible');
@@ -141,7 +141,7 @@ describe('Roulette new features', () => {
     cy.wait(1000);
 
     cy.contains('CSV').scrollIntoView().click({ scrollBehavior: false });
-    cy.get('[placeholder="Pega CSV (nombre,peso)"]').type('Ana,2{enter}Luis');
+    cy.typeIn('[placeholder="Pega CSV (nombre,peso)"]', 'Ana,2{enter}Luis');
     cy.contains('IMPORTAR').scrollIntoView().click({ scrollBehavior: false });
     cy.contains('Participants (2)').should('be.visible');
   });

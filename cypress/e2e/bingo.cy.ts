@@ -15,7 +15,7 @@ describe('Bingo', () => {
 
     const names = ['Alice', 'Bob', 'Charlie', 'Diana']
     names.forEach((name) => {
-      cy.get('[placeholder="Nombre del usuario..."]').type(name)
+      cy.typeIn('[placeholder="Nombre del usuario..."]', name)
       cy.contains(/^Añadir$/).click()
       cy.contains(name).should('be.visible')
     })
@@ -24,7 +24,7 @@ describe('Bingo', () => {
   it('starts the game and shows game controls', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
-    cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
+    cy.typeIn('[placeholder="Nombre del usuario..."]', 'Alice')
     cy.contains(/^Añadir$/).click()
     cy.contains('Empezar Partida').click()
 
@@ -36,7 +36,7 @@ describe('Bingo', () => {
   it('toggles auto mode', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
-    cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
+    cy.typeIn('[placeholder="Nombre del usuario..."]', 'Alice')
     cy.contains(/^Añadir$/).click()
     cy.contains('Empezar Partida').click()
 
@@ -50,7 +50,7 @@ describe('Bingo', () => {
   it('reopens the participants modal via Nueva partida', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
-    cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
+    cy.typeIn('[placeholder="Nombre del usuario..."]', 'Alice')
     cy.contains(/^Añadir$/).click()
     cy.contains('Empezar Partida').click()
 
@@ -63,9 +63,9 @@ describe('Bingo', () => {
   it('removes an individual participant from the modal', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
-    cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
+    cy.typeIn('[placeholder="Nombre del usuario..."]', 'Alice')
     cy.contains(/^Añadir$/).click()
-    cy.get('[placeholder="Nombre del usuario..."]').type('Bob')
+    cy.typeIn('[placeholder="Nombre del usuario..."]', 'Bob')
     cy.contains(/^Añadir$/).click()
 
     cy.contains('Alice').parent().contains('X').click()
@@ -76,9 +76,9 @@ describe('Bingo', () => {
   it('clears all participants from the modal', () => {
     cy.visit('/Bingo?role=viewer', { timeout: 15000 })
 
-    cy.get('[placeholder="Nombre del usuario..."]').type('Alice')
+    cy.typeIn('[placeholder="Nombre del usuario..."]', 'Alice')
     cy.contains(/^Añadir$/).click()
-    cy.get('[placeholder="Nombre del usuario..."]').type('Bob')
+    cy.typeIn('[placeholder="Nombre del usuario..."]', 'Bob')
     cy.contains(/^Añadir$/).click()
 
     cy.contains('Eliminar todos').click()

@@ -24,3 +24,35 @@ export function setAuth(role: 'viewer' | 'mod' | 'streamer'): void {
   const token = fakeJwt(scopes[role])
   window.localStorage.setItem('userToken', token)
 }
+
+/**
+ * Los <input> de react-native-web se re-montan poco despues del load
+ * (carga de participantes desde AsyncStorage + conexion del socket).
+ * Si Cypress consulta el input durante esa ventana, queda con una
+ * referencia a un nodo ya desconectado y cy.type() aborta con
+ * "targeted a disabled element" (su comprobacion de focusability usa
+ * jQuery/Sizzle, que no encuentra nodos fuera del documento).
+ *
+ * typeIn() espera a que el arbol se estabilice y escribe sobre el nodo vivo.
+ */
+Cypress.Commands.add('typeIn', (selector: string, text: string) => {
+  cy.get(selector, { timeout: 15000 }).should('be.visible')
+  cy.wait(800)
+  cy.get(selector).then(($el) => {
+    if (!$el.length || !$el[0].isConnected) {
+      cy.wait(500)
+    }
+  })
+  cy.get(selector, { timeout: 15000 }).type(text, { force: true })
+})
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Cypress {
+    interface Chainable {
+      typeIn(selector: string, text: string): Chainable<void>
+    }
+  }
+}
+
+export {}

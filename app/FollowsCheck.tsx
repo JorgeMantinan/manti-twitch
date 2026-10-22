@@ -71,7 +71,7 @@ export default function FollowsCheck() {
       totalFollowings: cache.totalFollowings ?? null,
       totalFollowers: cache.totalFollowers ?? null,
     });
-    setLastapiFetch(cache.at);
+    setLastFetch(cache.at);
   };
 
   const loadFromApi = async (token: string, isRefresh = false) => {

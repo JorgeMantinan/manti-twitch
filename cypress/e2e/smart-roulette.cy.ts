@@ -15,7 +15,7 @@ describe('Smart Roulette', () => {
 
     const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank']
     names.forEach((name) => {
-      cy.get('[placeholder="Add participant"]').type(name)
+      cy.typeIn('[placeholder="Add participant"]', name)
       cy.contains('Añadir').click()
       cy.contains(name).should('be.visible')
     })
@@ -29,9 +29,9 @@ describe('Smart Roulette', () => {
   it('removes an individual participant', () => {
     cy.visit('/SmartRoulette?role=viewer', { timeout: 15000 })
 
-    cy.get('[placeholder="Add participant"]').type('Alice')
+    cy.typeIn('[placeholder="Add participant"]', 'Alice')
     cy.contains('Añadir').click()
-    cy.get('[placeholder="Add participant"]').type('Bob')
+    cy.typeIn('[placeholder="Add participant"]', 'Bob')
     cy.contains('Añadir').click()
 
     cy.contains('Participants').should('contain', '2')
@@ -43,9 +43,9 @@ describe('Smart Roulette', () => {
   it('clears all participants', () => {
     cy.visit('/SmartRoulette?role=viewer', { timeout: 15000 })
 
-    cy.get('[placeholder="Add participant"]').type('Alice')
+    cy.typeIn('[placeholder="Add participant"]', 'Alice')
     cy.contains('Añadir').click()
-    cy.get('[placeholder="Add participant"]').type('Bob')
+    cy.typeIn('[placeholder="Add participant"]', 'Bob')
     cy.contains('Añadir').click()
 
     cy.contains('Eliminar todo').click()
